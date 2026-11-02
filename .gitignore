@@ -1,2 +1,20 @@
-# Local Netlify folder
-.netlify
+# Dependencias (se instalan con npm install)
+node_modules/
+
+# Enlace local con el sitio de Netlify y datos de netlify dev
+.netlify/
+
+# Variables de entorno locales (claves)
+.env
+.env.*
+
+# Logs
+npm-debug.log*
+*.log
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

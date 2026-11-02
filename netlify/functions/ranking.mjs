@@ -161,7 +161,28 @@ export default async (req) => {
   if (req.method === "GET" && url.searchParams.has("progreso")) {
     const juego = url.searchParams.get("progreso"), id = url.searchParams.get("id") || "";
     if (!(juego in JUEGOS) || !idOk(id)) return json({ error: "Datos no válidos" }, 400);
-    return json({ datos: (await store.get(`p/${juego}/${id}`, { type: "json" })) || null });
+    // Además del progreso guardado, se reconstruye lo que el servidor ya sabe de este jugador
+    // (logros anunciados, mejor examen, problemas resueltos y mejores tiempos), por si el
+    // progreso se perdió antes de existir esta copia
+    const [datos, marcas, examen, problemas, mejores] = await Promise.all([
+      store.get(`p/${juego}/${id}`, { type: "json" }),
+      store.list({ prefix: `ld/${juego}/` }),
+      store.get(`e/${juego}/${id}`, { type: "json" }),
+      store.get(`pr/${juego}/${id}`, { type: "json" }),
+      Promise.all(Object.keys(JUEGOS[juego]).map(async (s) => [s, await store.get(`r/${juego}/${s}/${id}`, { type: "json" })])),
+    ]);
+    const logros = {};
+    await Promise.all(marcas.blobs.filter((x) => x.key.endsWith(`/${id}`)).map(async (x) => {
+      const m = await store.get(x.key, { type: "json" });
+      logros[x.key.split("/")[2]] = (m && m.f) || new Date().toISOString();
+    }));
+    const extra = {
+      logros,
+      examen: examen ? { aciertos: examen.aciertos, estrellas: examen.estrellas, tiempo: examen.tiempo } : null,
+      problemas: problemas ? problemas.resueltos : 0,
+      mejores: Object.fromEntries(mejores.filter(([, v]) => v).map(([s, v]) => [s, v.puntos])),
+    };
+    return json({ datos: datos || null, extra });
   }
 
   if (req.method === "GET" && url.searchParams.has("feed")) {

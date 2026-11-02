@@ -77,18 +77,30 @@ function mezclarProgreso(a, b) {
   return r;
 }
 // Trae el progreso guardado en el servidor para este jugador y lo une con el del dispositivo
-async function syncJuego(juego) {
+// umbrales: {seccion:{estrellas:[3★,2★]}} para calcular las estrellas de los mejores tiempos del servidor
+async function syncJuego(juego, umbrales) {
   if (!profile.alias) return null;
   try {
     const j = await apiGet(`progreso=${juego}&id=${encodeURIComponent(profile.id)}`);
-    const local = LS.get(juego + ":progress", {}), mez = mezclarProgreso(local, j.datos);
+    const remoto = JSON.parse(JSON.stringify(j.datos || {})), ex = j.extra || {};
+    remoto.ach = Object.assign({}, ex.logros || {}, remoto.ach || {});
+    if (ex.examen) remoto.examen = remoto.examen ? mezclarProgreso({ examen: remoto.examen }, { examen: ex.examen }).examen : ex.examen;
+    if (ex.problemas) remoto.problemas = Math.max(remoto.problemas || 0, ex.problemas);
+    remoto.best = remoto.best || {};
+    for (const [s, puntos] of Object.entries(ex.mejores || {})) {
+      const u = umbrales && umbrales[s] && umbrales[s].estrellas;
+      const stars = u ? (puntos <= u[0] ? 3 : puntos <= u[1] ? 2 : 1) : 0;
+      const b = remoto.best[s];
+      remoto.best[s] = !b ? { score: puntos, stars } : { score: Math.min(b.score, puntos), stars: Math.max(b.stars || 0, stars) };
+    }
+    const local = LS.get(juego + ":progress", {}), mez = mezclarProgreso(local, remoto);
     LS.set(juego + ":progress", mez);
     if (JSON.stringify(mez) !== JSON.stringify(j.datos)) apiPost({ accion: "progreso", id: profile.id, juego, datos: mez });
     return mez;
   } catch (e) { return null; }
 }
 async function syncProgreso() {
-  const mez = await syncJuego(CFG.juego);
+  const mez = await syncJuego(CFG.juego, CFG.secciones);
   if (mez) { progress = Object.assign({ best: {}, ach: {} }, JSON.parse(JSON.stringify(CFG.progresoExtra || {})), mez); renderLogros(); }
 }
 let pendingRank = null;
