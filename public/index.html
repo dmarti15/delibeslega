@@ -24,8 +24,9 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
 .plan h2{font-family:"Baloo 2",Nunito,sans-serif;font-size:1.45rem;line-height:1.1;margin:0}
 .plan p{margin:0;color:var(--muted);font-weight:700;font-size:.9rem;line-height:1.4}
 .plan .pie{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
-.plan .st{font-weight:800;color:var(--ink)}
-.plan .st span{color:var(--target)}
+.plan .st{font-weight:800;color:var(--ink);display:flex;flex-direction:column;gap:2px;font-size:.92rem}
+.plan .st .y{color:var(--target)}
+.plan .st .hstars{font-size:1rem}
 .plan .ir{font-weight:800;background:var(--acc);color:#fff;border-radius:999px;padding:7px 14px;font-size:.9rem}
 .plan.soon{opacity:.6;box-shadow:0 6px 0 var(--chip)}
 .plan.soon .ir{background:var(--chip);color:var(--muted)}
@@ -57,19 +58,19 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
       <span class="ic">🗺️</span><span class="asig">Ciencias Sociales</span>
       <h2>Europa</h2>
       <p>Países, capitales, ríos, mares y océanos y sistemas montañosos.</p>
-      <div class="pie"><span class="st" data-juego="europa" data-n="5"></span><span class="ir">Jugar</span></div>
+      <div class="pie"><span class="st" data-juego="europa" data-n="5" data-tipo="estrellas"></span><span class="ir">Jugar</span></div>
     </a>
     <a class="plan mat" href="mates/">
       <span class="ic">🔢</span><span class="asig">Matemáticas</span>
       <h2>Múltiplos, divisores y poliedros</h2>
       <p>Múltiplos y divisores, criterios de divisibilidad, m.c.d., m.c.m. y poliedros.</p>
-      <div class="pie"><span class="st" data-juego="mates" data-n="8"></span><span class="ir">Jugar</span></div>
+      <div class="pie"><span class="st" data-juego="mates" data-tipo="examen"></span><span class="ir">Jugar</span></div>
     </a>
     <a class="plan len" href="lengua/">
       <span class="ic">📖</span><span class="asig">Lengua</span>
       <h2>Determinantes, diptongos y palabras</h2>
       <p>Determinantes, vocales, diptongo e hiato, la letra v, palabras polisémicas y homófonas.</p>
-      <div class="pie"><span class="st" data-juego="lengua" data-n="7"></span><span class="ir">Jugar</span></div>
+      <div class="pie"><span class="st" data-juego="lengua" data-tipo="examen"></span><span class="ir">Jugar</span></div>
     </a>
   </div>
   <section class="feed" aria-live="polite">
@@ -81,11 +82,20 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
 <script src="comun/logros.js"></script>
 <script>
 Plan.init({onJugador:()=>Promise.all(["europa","mates","lengua"].map(syncJuego)).then(pintarEstrellas)});
+// Resumen de cada plan: logros conseguidos y, según el plan, estrellas (Europa) o mejor examen (Mates, Lengua)
 function pintarEstrellas(){
   document.querySelectorAll(".st[data-juego]").forEach(s=>{
-    const p=LS.get(s.dataset.juego+":progress",{best:{}}),n=+s.dataset.n;
-    const st=Object.values(p.best||{}).reduce((t,b)=>t+(b.stars||0),0);
-    s.innerHTML=`<span>★</span> ${st} de ${n*3}`;
+    const juego=s.dataset.juego,p=LS.get(juego+":progress",{best:{},ach:{}});
+    const cat=LOGROS[juego]||[],logros=cat.filter(a=>(p.ach||{})[a.id]).length;
+    let linea;
+    if(s.dataset.tipo==="examen"){
+      const ex=p.examen;
+      linea=ex?`<span>📝 ${halfStars(ex.estrellas)} Nota ${nota(ex.estrellas)}</span>`:`<span>📝 Examen sin hacer</span>`;
+    }else{
+      const st=Object.values(p.best||{}).reduce((t,b)=>t+(b.stars||0),0);
+      linea=`<span><span class="y">★</span> ${st} de ${(+s.dataset.n)*3}</span>`;
+    }
+    s.innerHTML=linea+`<span>🏅 ${logros} de ${cat.length} logros</span>`;
   });
 }
 pintarEstrellas();

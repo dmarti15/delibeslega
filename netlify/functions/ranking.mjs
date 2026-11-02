@@ -129,7 +129,8 @@ const TABLAS = {
 };
 const POR_PROBLEMAS = (a, b) => b.resueltos - a.resueltos || String(a.fecha).localeCompare(String(b.fecha));
 const vistaProblemas = (e) => ({ alias: e.alias, resueltos: e.resueltos });
-const POR_EXAMEN = (a, b) => b.aciertos - a.aciertos || a.tiempo - b.tiempo || String(a.fecha).localeCompare(String(b.fecha));
+// Examen: más aciertos primero; a igualdad, quien lo consiguió antes (el tiempo no cuenta)
+const POR_EXAMEN = (a, b) => b.aciertos - a.aciertos || String(a.fecha).localeCompare(String(b.fecha));
 const vistaExamen = (e) => ({ alias: e.alias, estrellas: e.estrellas, aciertos: e.aciertos, tiempo: e.tiempo });
 const vistaPuntos = (e) => ({ alias: e.alias, puntos: e.puntos, tiempo: e.tiempo, fallos: e.fallos, pistas: e.pistas });
 const vistaStats = (e) => ({ alias: e.alias, segundos: e.segundos, partidas: e.partidas });
@@ -259,7 +260,7 @@ export default async (req) => {
       const resumen = await sumarStats(juego, tiempo);
       const key = `e/${juego}/${id}`;
       const prev = await store.get(key, { type: "json" });
-      const mejora = !prev || aciertos > prev.aciertos || (aciertos === prev.aciertos && tiempo < prev.tiempo);
+      const mejora = !prev || aciertos > prev.aciertos;
       if (mejora) await store.setJSON(key, { aciertos, estrellas: aciertos / 2, tiempo: r1(tiempo), fecha: new Date().toISOString() });
       const c = await clasificacion(store, `e/${juego}/`, POR_EXAMEN, vistaExamen, id);
       const mejor = mejora ? { estrellas: aciertos / 2, tiempo: r1(tiempo) } : { estrellas: prev.estrellas, tiempo: prev.tiempo };
@@ -309,7 +310,9 @@ export default async (req) => {
     if (!(juego in JUEGOS) || !(seccion in JUEGOS[juego])) return json({ error: "Sección no válida" }, 400);
     if (![fallos, pistas].every((n) => Number.isInteger(n) && n >= 0 && n <= 500))
       return json({ error: "Datos de partida no válidos" }, 400);
-    if (!Number.isFinite(tiempo) || tiempo < JUEGOS[juego][seccion] || tiempo > 3600)
+    // Las partidas que no entran en el ranking de tiempos solo necesitan un tiempo razonable
+    const minimo = modo === "temario" ? JUEGOS[juego][seccion] : 3;
+    if (!Number.isFinite(tiempo) || tiempo < minimo || tiempo > 3600)
       return json({ error: "Tiempo no válido" }, 400);
 
     // Si el dispositivo aún no tiene nombre en el servidor, se registra ahora

@@ -10,6 +10,8 @@ const fmtClock = s => { s = Math.floor(s); return Math.floor(s / 60) + ":" + Str
 const fmtMin = s => { s = Math.round(s); const m = Math.floor(s / 60); return m < 60 ? (m ? `${m} min ${s % 60} s` : `${s} s`) : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")} min`; };
 const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
 const fmtEst = n => String(n).replace(".", ",");
+// Nota del examen sobre 10: cada estrella son 2 puntos (3,5 ★ = 7)
+const nota = est => fmtEst(Math.round(est * 2 * 10) / 10);
 // Estrellas con medias: 5 estrellas rellenas en proporción (0 a 5)
 const halfStars = est => `<span class="hstars" style="--p:${est * 20}%" aria-label="${fmtEst(est)} estrellas de 5">★★★★★</span>`;
 const starsHtml = n => "★".repeat(n) + `<span class="dim">${"★".repeat(3 - n)}</span>`;
@@ -62,11 +64,15 @@ function mezclarProgreso(a, b) {
   r.best = r.best || {};
   for (const s in b.best || {}) {
     const x = r.best[s], y = b.best[s];
-    r.best[s] = !x ? y : { score: Math.min(x.score, y.score), stars: Math.max(x.stars || 0, y.stars || 0) };
+    if (!x) r.best[s] = y;
+    else if (x.aciertos != null || y.aciertos != null) {
+      const g = (x.aciertos ?? -1) >= (y.aciertos ?? -1) ? x : y;
+      r.best[s] = { ...g, stars: Math.max(x.stars || 0, y.stars || 0) };
+    } else r.best[s] = { score: Math.min(x.score, y.score), stars: Math.max(x.stars || 0, y.stars || 0) };
   }
   r.ach = r.ach || {};
   for (const k in b.ach || {}) if (!r.ach[k] || b.ach[k] < r.ach[k]) r.ach[k] = b.ach[k];
-  if (b.examen) { const x = r.examen, y = b.examen; if (!x || y.aciertos > x.aciertos || (y.aciertos === x.aciertos && y.tiempo < x.tiempo)) r.examen = y; }
+  if (b.examen) { const x = r.examen, y = b.examen; if (!x || y.aciertos > x.aciertos) r.examen = y; }
   for (const k in b) {
     if (["best", "ach", "examen"].includes(k)) continue;
     if (Array.isArray(b[k])) r[k] = [...new Set([...(r[k] || []), ...b[k]])];
@@ -133,14 +139,15 @@ function confetti() {
 
 /* ---------- logros ---------- */
 // Logros comunes; cada plan añade los suyos con Plan.init({ach:[...]})
-function logrosBase({ pistas = true, primero = "Primer paso", pleno = "Pleno" } = {}) {
+function logrosBase({ pistas = true, primero = "Primer paso", pleno = "Pleno", tiempo = true } = {}) {
   const l = [
     { id: "primera", icon: "🧭", name: primero, desc: "Termina cualquier sección." },
     pistas && { id: "sinpistas", icon: "🧠", name: "Sin pistas", desc: "Termina una sección del temario sin pedir pistas." },
     { id: "punteria", icon: "🎯", name: "Puntería", desc: "Termina una sección del temario sin ningún fallo." },
     { id: "racha10", icon: "🔥", name: "Racha de 10", desc: "Acierta 10 seguidos." },
     { id: "racha25", icon: "☄️", name: "Imparable", desc: "Acierta 25 seguidos." },
-    { id: "velocista", icon: "⚡", name: "Velocista", desc: "Consigue 3 estrellas en una sección." },
+    tiempo ? { id: "velocista", icon: "⚡", name: "Velocista", desc: "Consigue 3 estrellas en una sección." }
+           : { id: "velocista", icon: "⭐", name: "Tres estrellas", desc: "Consigue 3 estrellas en una sección." },
     { id: "pleno", icon: "🏆", name: pleno, desc: "Consigue 3 estrellas en todas las secciones." },
     { id: "repaso", icon: "📚", name: "Lección aprendida", desc: "Completa un repaso de fallos." },
     { id: "podio", icon: "🥇", name: "En el podio", desc: "Entra en el top 3 de un ranking." },
@@ -180,11 +187,20 @@ function finishRun(r) {
   if (r.todo) { unlock("enciclopedia"); return res; }
   if (!r.pistas) unlock("sinpistas");
   if (!r.fallos) unlock("punteria");
-  const [t3, t2] = CFG.secciones[r.sec].estrellas;
-  res.stars = score <= t3 ? 3 : score <= t2 ? 2 : 1;
   const prev = progress.best[r.sec]; res.prev = prev || null;
-  if (!prev || score < prev.score) { progress.best[r.sec] = { score, stars: Math.max(res.stars, prev ? prev.stars : 0) }; res.record = true; }
-  else if (res.stars > prev.stars) prev.stars = res.stars;
+  if (CFG.porAciertos) {
+    // Planes de preguntas: 3 ★ sin fallos, 2 ★ con al menos el 80 % a la primera, 1 ★ el resto
+    const ac = r.primera, total = r.base;
+    res.stars = ac === total ? 3 : ac >= Math.ceil(total * .8) ? 2 : 1;
+    const prevAc = prev && prev.aciertos != null ? prev.aciertos : -1;
+    if (ac > prevAc) { progress.best[r.sec] = { aciertos: ac, total, stars: Math.max(res.stars, prev ? prev.stars || 0 : 0) }; res.record = true; }
+    else if (res.stars > (prev.stars || 0)) prev.stars = res.stars;
+  } else {
+    const [t3, t2] = CFG.secciones[r.sec].estrellas;
+    res.stars = score <= t3 ? 3 : score <= t2 ? 2 : 1;
+    if (!prev || score < prev.score) { progress.best[r.sec] = { score, stars: Math.max(res.stars, prev ? prev.stars : 0) }; res.record = true; }
+    else if (res.stars > prev.stars) prev.stars = res.stars;
+  }
   saveProgress();
   if (res.stars === 3) unlock("velocista");
   if (Object.keys(CFG.secciones).every(s => progress.best[s] && progress.best[s].stars === 3)) unlock("pleno");
@@ -219,11 +235,17 @@ function rankList(top, yoPos, val = e => fmt(e.puntos)) {
 // Tarjeta final: p es el prefijo de los ids (p+"Stars", p+"Big", p+"Txt", p+"Rank")
 function renderEnd(p, r, res, missedTxt) {
   $(p + "Stars").innerHTML = res.stars ? starsHtml(res.stars) : "";
-  $(p + "Big").textContent = fmt(res.score);
-  let t = `Tiempo ${fmt(r.secs)}`;
-  if (r.fallos) t += `, ${plural(r.fallos, "fallo", "fallos")} (+${r.fallos * PEN_FALLO} s)`;
-  if (r.pistas) t += `, ${plural(r.pistas, "pista", "pistas")} (+${r.pistas * PEN_PISTA} s)`;
-  t += ".";
+  let t;
+  if (CFG.porAciertos) {
+    $(p + "Big").textContent = `${r.primera} de ${r.base}`;
+    t = r.primera === r.base ? "¡Todas a la primera!" : `Has acertado ${r.primera} de ${r.base} a la primera.`;
+  } else {
+    $(p + "Big").textContent = fmt(res.score);
+    t = `Tiempo ${fmt(r.secs)}`;
+    if (r.fallos) t += `, ${plural(r.fallos, "fallo", "fallos")} (+${r.fallos * PEN_FALLO} s)`;
+    if (r.pistas) t += `, ${plural(r.pistas, "pista", "pistas")} (+${r.pistas * PEN_PISTA} s)`;
+    t += ".";
+  }
   if (res.record && res.prev) t += " ¡Nuevo récord personal!";
   if (missedTxt) t += " " + missedTxt;
   $(p + "Txt").textContent = t;
@@ -263,7 +285,7 @@ function sendExam(p, r) {
       return;
     }
     const st = j.stats ? ` Llevas ${fmtMin(j.stats.segundos)} jugados en ${plural(j.stats.partidas, "partida", "partidas")} en este plan.` : "";
-    box.innerHTML = `<p class="note">${j.mejora ? "" : `Tu mejor examen sigue siendo ${fmtEst(j.mejor.estrellas)} ★ (${fmt(j.mejor.tiempo)}). `}Vas ${j.posicion}º de ${j.total}.${st}</p>` + rankList(j.top, j.posicion, RK_VAL.examen);
+    box.innerHTML = `<p class="note">${j.mejora ? "" : `Tu mejor examen sigue siendo un ${nota(j.mejor.estrellas)}. `}Vas ${j.posicion}º de ${j.total}.${st}</p>` + rankList(j.top, j.posicion, RK_VAL.examen);
     if (j.posicion && j.posicion <= 3) unlock("podio");
   });
 }
@@ -280,7 +302,7 @@ function problemaResuelto() {
 /* ---------- pestaña Ranking ---------- */
 let rkSec = null;
 const RK_VAL = { minutos: e => fmtMin(e.segundos), partidas: e => plural(e.partidas, "partida", "partidas"),
-  examen: e => `${halfStars(e.estrellas)} ${fmtEst(e.estrellas)} <small>(${fmt(e.tiempo)})</small>`,
+  examen: e => `${halfStars(e.estrellas)} <small>Nota</small> ${nota(e.estrellas)}`,
   problemas: e => plural(e.resueltos, "problema", "problemas") };
 function rkTabs() {
   const t = {};
@@ -309,10 +331,12 @@ async function loadRanking() {
 function renderLogros() {
   if (!$("lgSecs")) return;
   const ex = progress.examen;
-  const exCard = CFG.examen ? `<div class="sec"><b>📝 Examen</b><div class="stars sm">${halfStars(ex ? ex.estrellas : 0)}</div><small>${ex ? `Mejor: ${fmtEst(ex.estrellas)} ★ en ${fmt(ex.tiempo)}` : "Sin hacer"}</small><small>Media estrella por acierto</small></div>` : "";
+  const exCard = CFG.examen ? `<div class="sec"><b>📝 Examen</b><div class="stars sm">${halfStars(ex ? ex.estrellas : 0)}</div><small>${ex ? `Mejor nota: ${nota(ex.estrellas)}` : "Sin hacer"}</small><small>Cada acierto: 1 punto y media estrella</small></div>` : "";
   $("lgSecs").innerHTML = exCard + Object.keys(CFG.secciones).map(s => {
     const b = progress.best[s], c = CFG.secciones[s];
-    return `<div class="sec"><b>${esc(c.nombre)}</b><div class="stars sm">${starsHtml(b ? b.stars : 0)}</div><small>${b ? "Mejor: " + fmt(b.score) : "Sin jugar"}</small><small>3 ★ por debajo de ${fmtClock(c.estrellas[0])}</small></div>`;
+    const mejor = !b ? "Sin jugar" : CFG.porAciertos ? (b.aciertos != null ? `Mejor: ${b.aciertos} de ${b.total}` : "Jugada") : "Mejor: " + fmt(b.score);
+    const regla = CFG.porAciertos ? "3 ★ sin fallos · 2 ★ con 8 de cada 10" : `3 ★ por debajo de ${fmtClock(c.estrellas[0])}`;
+    return `<div class="sec"><b>${esc(c.nombre)}</b><div class="stars sm">${starsHtml(b ? b.stars || 0 : 0)}</div><small>${mejor}</small><small>${regla}</small></div>`;
   }).join("");
   const n = CFG.ach.filter(a => progress.ach[a.id]).length; $("lgCount").textContent = `${n} de ${CFG.ach.length}`;
   $("lgAch").innerHTML = CFG.ach.map(a => `<div class="a ${progress.ach[a.id] ? "" : "lock"}"><span class="ic">${a.icon}</span><span><b>${esc(a.name)}</b><small>${esc(a.desc)}</small></span></div>`).join("");

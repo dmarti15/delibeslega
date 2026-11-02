@@ -26,7 +26,7 @@ function start(list){
   const qs=list?list.map(q=>({...q,again:false})):examen?crearExamen():SECS[sec].gen();
   qs.forEach(q=>{q.base=q});
   queue=qs;total=qs.length;done=0;failed=[];requeued=new Set();busy=false;
-  run={sec,t0:null,paused:0,pauseAt:null,fallos:0,pistas:0,streak:0,retry:!!list,todo:false,done:false,examen,aciertos:0};
+  run={sec,t0:null,paused:0,pauseAt:null,fallos:0,pistas:0,streak:0,retry:!!list,todo:false,done:false,examen,aciertos:0,base:qs.length};
   $("qsec").textContent=examen?"📝 Examen":sec==="examen"?"Práctica de los fallos del examen":SECS[sec].nombre;$("time").textContent="0:00";
   next();arm();
 }
@@ -118,13 +118,13 @@ function resolve(ok){
 function finishExamen(){
   run.done=true;QH.limpiar&&QH.limpiar();
   const secs=elapsed(),ac=run.aciertos,est=ac/2,prev=progress.examen;
-  const record=!prev||ac>prev.aciertos||(ac===prev.aciertos&&secs<prev.tiempo);
+  const record=!prev||ac>prev.aciertos;
   if(record){progress.examen={aciertos:ac,estrellas:est,tiempo:Math.round(secs*10)/10};saveProgress()}
   unlock("primera");if(est>=2.5)unlock("aprobado");if(est>=4.5)unlock("sobresaliente");if(ac===PREGUNTAS_EXAMEN)unlock("perfecto");
   renderLogros();
   $("endStars").innerHTML=halfStars(est);
-  $("endBig").textContent=`${fmtEst(est)} ★`;
-  $("endTxt").textContent=`Has acertado ${ac} de ${PREGUNTAS_EXAMEN} en ${fmt(secs)}.`+(record&&prev?" ¡Tu mejor examen!":"");
+  $("endBig").textContent=`Nota: ${nota(est)}`;
+  $("endTxt").textContent=`Has acertado ${ac} de ${PREGUNTAS_EXAMEN} (${fmtEst(est)} ${est===1?"estrella":"estrellas"}).`+(record&&prev?" ¡Tu mejor examen!":"");
   const rev=failed.length?`<details class="review"><summary>Ver ${failed.length===1?"la pregunta fallada":`las ${failed.length} preguntas falladas`}</summary>${
     failed.map(q=>`<div class="rq"><div class="rq-t">${q.texto}</div><div class="rq-s">${q.sol}</div></div>`).join("")}</details>`:"";
   $("endRank").innerHTML=`<div class="rk"></div>`+rev;
@@ -137,7 +137,7 @@ function finish(){
   if(run.examen)return finishExamen();
   $("retry").textContent="Repasar los fallos";
   run.done=true;QH.limpiar&&QH.limpiar();
-  const secs=elapsed(),r={...run,secs};
+  const secs=elapsed(),r={...run,secs,primera:run.base-failed.length};
   const res=finishRun(r);
   renderEnd("end",r,res,failed.length?(failed.length===1?"Has fallado 1 pregunta; puedes repasarla.":`Has fallado ${failed.length} preguntas; puedes repasarlas.`):"");
   $("retry").style.display=failed.length?"":"none";
@@ -164,7 +164,7 @@ const Quiz={
     $("modes").onclick=e=>{const b=e.target.closest("[data-sec]");if(!b)return;sec=b.dataset.sec;renderModes();start()};
     $("again").onclick=()=>start();
     $("retry").onclick=()=>start(failed);
-    Plan.init(Object.assign({},o.plan,{examen:true,practica:true,
+    Plan.init(Object.assign({},o.plan,{examen:true,practica:true,porAciertos:true,
       secciones:Object.fromEntries(Object.entries(SECS).map(([k,v])=>[k,{nombre:v.nombre,estrellas:v.estrellas,contador:!!v.contador}])),
       onView:v=>{if(v==="playview"){arm();if($("qfb").hidden&&!$("teo").open)resume()}else pause()},
     }));

@@ -67,6 +67,21 @@ svg#map.can-pick{cursor:pointer}
 }
 .stage .end{touch-action:pan-y}
 #capview{flex:1;min-height:0}
+
+/* Recuento del modo estudio */
+.estudio{position:absolute;left:12px;bottom:12px;background:var(--panel);border-radius:16px;padding:12px 14px;box-shadow:0 4px 0 var(--sea-deep);min-width:200px;z-index:5;font-size:.9rem}
+.estudio .tit{font-family:"Baloo 2",Nunito,sans-serif;font-weight:800;font-size:1.05rem;margin-bottom:4px}
+.estudio .fila{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-weight:700;margin:6px 0}
+.estudio .fila b{font-variant-numeric:tabular-nums}
+.estudio .fila i{grid-column:1/-1;height:6px;border-radius:9px;background:linear-gradient(90deg,var(--ok) var(--p),var(--chip) var(--p))}
+.estudio .fila.hecho span::after{content:" ✓";color:var(--ok)}
+.estudio .pie{color:var(--muted);font-size:.78rem;font-weight:700;margin-top:6px}
+.c.visto{fill:color-mix(in srgb,var(--land) 55%,var(--ok))}
+.micro.visto{fill:var(--ok)}
+.river.visto{stroke:var(--ok);stroke-width:2.6}
+.mt.visto polygon{fill:var(--ok)}
+.sea.visto{fill:var(--ok);stroke:var(--paper)}
+@media (max-width:560px){.estudio{left:8px;bottom:8px;min-width:0;padding:8px 10px;font-size:.78rem}.estudio .fila{margin:3px 0}.estudio .pie{display:none}}
 </style>
 </head>
 <body>
@@ -113,6 +128,7 @@ svg#map.can-pick{cursor:pointer}
         <button id="zreset" aria-label="Ver toda Europa" style="font-size:.95rem">⤢</button>
       </div>
       <div class="toast" id="toast"></div>
+      <div class="estudio" id="estudio" hidden></div>
       <div class="end" id="end"><div class="card">
         <div class="stars" id="endStars"></div>
         <div class="big" id="endBig"></div>
@@ -249,7 +265,7 @@ const inTemario=key=>{const n=nodes[key];return n.kind==="countries"?!TEMARIO_OU
 const TEMARIO_KEYS=Object.keys(nodes).filter(inTemario);
 function inScope(key){return scope==="todo"||inTemario(key)}
 function applyScope(){for(const k in nodes){const off=!inScope(k),n=nodes[k];n.shapes.forEach(s=>{if(n.kind==="countries"&&s.tagName==="path")s.classList.toggle("out",off);else s.classList.toggle("off",off)})}}
-function resetBoard(){clearLabels();Object.keys(nodes).forEach(k=>["ok","bad","hint"].forEach(c=>setCls(k,c,false)))}
+function resetBoard(){clearLabels();Object.keys(nodes).forEach(k=>["ok","bad","hint","visto"].forEach(c=>setCls(k,c,false)));$("estudio").hidden=true}
 function arm(){
   const onPlay=viewOn("mapview");
   if(run&&run.t0==null&&onPlay&&mode!=="capitals")run.t0=performance.now();
@@ -298,10 +314,11 @@ function onPick(key){
   if(study){
     showLabel(key,lblCls(n.kind));
     toast(n.kind==="countries"?`${n.item.name}: capital ${CAPITALS[n.item.id]}`:n.item.name);
-    if(inTemario(key)&&!progress.explored.includes(key)){
+    if(!progress.explored.includes(key)){
       progress.explored.push(key);saveProgress();
       if(TEMARIO_KEYS.every(k=>progress.explored.includes(k)))unlock("explorador");
     }
+    setCls(key,"visto",true);renderEstudio();
     return;
   }
   if(!cur||locked||n.kind!==mode)return;
@@ -416,6 +433,18 @@ function enterStudy(){
   Object.values(LAYER).forEach(g=>{$(g).classList.add("live");$(g).classList.remove("dimmed")});$("gMicro").classList.add("live");$("gMicro").classList.remove("dimmed");
   $("end").classList.remove("on");$("pq").textContent="Modo estudio";$("pt").textContent="Toca cualquier cosa";
   $("time").textContent="";$("prog").textContent="";$("streak").textContent="";$("skip").style.display="none";
+  // Marca lo ya tocado en el modo estudio y muestra el recuento por tipo
+  progress.explored.forEach(k=>{if(nodes[k]&&inScope(k))setCls(k,"visto",true)});
+  $("estudio").hidden=false;renderEstudio();
+}
+const TIPOS_ESTUDIO=[["countries","Países"],["rivers","Ríos"],["seas","Mares y océanos"],["mountains","Cordilleras"]];
+function renderEstudio(){
+  const vistos=new Set(progress.explored);
+  const filas=TIPOS_ESTUDIO.map(([k,nombre])=>{
+    const todos=Object.keys(nodes).filter(x=>nodes[x].kind===k&&inScope(x)),n=todos.filter(x=>vistos.has(x)).length;
+    return `<div class="fila${n===todos.length?" hecho":""}"><span>${nombre}</span><b>${n}/${todos.length}</b><i style="--p:${100*n/todos.length}%"></i></div>`;
+  }).join("");
+  $("estudio").innerHTML=`<div class="tit">Has tocado</div>${filas}<div class="pie">En verde, lo que ya has visto</div>`;
 }
 $("study").onchange=e=>{study=e.target.checked;if(study)enterStudy();else start()};
 /* ---------- capitales ---------- */
