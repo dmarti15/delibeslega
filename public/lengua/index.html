@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lengua: determinantes, diptongos, la v y palabras</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../comun/comun.css">
+<link rel="stylesheet" href="../comun/quiz.css">
+<style>
+/* Estilos propios del plan de lengua: hoja de cuaderno de líneas */
+.mstage{background-image:linear-gradient(transparent 26px,var(--grid) 27px);background-size:100% 28px}
+.palabra{font-family:"Baloo 2",Nunito,sans-serif;font-size:2rem;letter-spacing:1px;display:inline-block;margin-top:4px}
+.hueco{display:inline-block;min-width:.9em;border-bottom:4px solid var(--target);color:var(--target);text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../" aria-label="Volver a los planes de trabajo">‹</a>
+  <h1>Lengua</h1>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-view="playview">Jugar</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="rankview">Ranking</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="logview">Logros</button>
+  </div>
+  <button class="who" id="who">👤 <span id="whoTxt">Pon tu nombre</span></button>
+  <button class="icon" id="snd" aria-label="Activar o quitar el sonido">🔊</button>
+</header>
+<main>
+  <section class="view on" id="playview">
+    <div class="bar"><div class="modes" id="modes"></div><button class="btn" id="teoBtn">📖 Teoría</button></div>
+    <div class="playarea">
+    <div class="mstage" id="stage">
+      <div class="qcard" id="qcard">
+        <div class="qhead"><span id="qsec"></span><span class="spacer"></span><span class="streak" id="streak"></span><span id="prog"></span><span class="clock" id="time">0:00</span></div>
+        <div class="qtext" id="qtext"></div>
+        <div id="qans"></div>
+        <div class="qfb" id="qfb" hidden></div>
+      </div>
+    </div>
+    <div class="end" id="end"><div class="card">
+      <div class="stars" id="endStars"></div>
+      <div class="big" id="endBig"></div>
+      <p id="endTxt"></p>
+      <div id="endRank"></div>
+      <div class="row"><button class="btn" id="again">Jugar otra vez</button><button class="btn main" id="retry">Repasar los fallos</button></div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="view page" id="rankview">
+    <div class="page-inner">
+      <div class="cap-top"><h2>Ranking</h2><span class="spacer"></span><button class="btn" id="rkReload">Actualizar</button></div>
+      <div class="bar" style="padding:0 0 14px" id="rkSecs"></div>
+      <div id="rkBody"></div>
+      <p class="note">El ranking es el del 📝 Examen: 10 preguntas de todas las secciones, media estrella por acierto. Con las mismas estrellas, gana quien lo hizo más rápido. Las prácticas no entran en el ranking, pero suman minutos jugados y partidas.</p>
+    </div>
+  </section>
+
+  <section class="view page" id="logview">
+    <div class="page-inner">
+      <h2 class="h2">Tus estrellas</h2>
+      <div class="secs" id="lgSecs"></div>
+      <h2 class="h2">Logros <span class="note" id="lgCount"></span></h2>
+      <div class="ach" id="lgAch"></div>
+      <p class="note">Las estrellas y los logros se guardan en este dispositivo y navegador.</p>
+    </div>
+  </section>
+</main>
+<dialog id="teo"><div id="teoBody"></div><div class="drow"><button class="btn main" id="teoClose">Entendido</button></div></dialog>
+
+<script src="../comun/comun.js"></script>
+<script src="../comun/logros.js"></script>
+<script src="../comun/quiz.js"></script>
+<script>
+/* =====================================================================
+   Utilidades
+   ===================================================================== */
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const sample=(arr,k)=>shuffle(arr).slice(0,k);
+const mezcla=(...g)=>shuffle(g.flat());
+const veces=(n,f)=>Array.from({length:n},f);
+const op=(texto,ops,sol,extra={})=>({tipo:"op",texto,ops,ok:0,sol,...extra}); // la primera opción es la correcta
+const Q=s=>`«${s}»`;
+
+/* =====================================================================
+   Determinantes
+   Cada frase marca sus determinantes con [tipo]. Tipos:
+   ad artículo determinado · ai artículo indeterminado · dem demostrativo · pos posesivo
+   num numeral · ind indefinido · int interrogativo o exclamativo
+   ===================================================================== */
+const TIPO_DET={
+  ad:{n:"Artículo determinado",d:"Los artículos determinados (el, la, los, las) presentan un sustantivo conocido."},
+  ai:{n:"Artículo indeterminado",d:"Los artículos indeterminados (un, una, unos, unas) presentan un sustantivo no conocido."},
+  dem:{n:"Demostrativo",d:"Los demostrativos (este, ese, aquel y sus femeninos y plurales) indican cercanía o lejanía."},
+  pos:{n:"Posesivo",d:"Los posesivos (mi, tu, su, nuestro, vuestro…) indican a quién pertenece algo."},
+  num:{n:"Numeral",d:"Los numerales indican cantidad exacta (dos, cinco: cardinales) u orden (primero, décimo: ordinales)."},
+  ind:{n:"Indefinido",d:"Los indefinidos (algunos, muchos, pocos, varios, ninguna, otro, cualquier, bastantes, todos…) indican cantidad de forma imprecisa."},
+  int:{n:"Interrogativo o exclamativo",d:"Los interrogativos y exclamativos (qué, cuánto, cuánta…) acompañan al sustantivo en preguntas o exclamaciones."},
+};
+const FRASES=[
+  "El[ad] perro de mi[pos] vecino ladra todas[ind] las[ad] noches.",
+  "Esta[dem] mañana he comprado tres[num] libros.",
+  "Una[ai] niña encontró unas[ai] llaves en el[ad] parque.",
+  "Nuestros[pos] abuelos viven en aquel[dem] pueblo.",
+  "¿Qué[int] película quieres ver?",
+  "Algunos[ind] alumnos llegaron tarde a la[ad] clase.",
+  "Ese[dem] coche es de mi[pos] tío.",
+  "Quedé en el[ad] segundo[num] puesto de la[ad] carrera.",
+  "Tengo muchos[ind] amigos en este[dem] colegio.",
+  "¡Qué[int] día tan bonito!",
+  "Sus[pos] padres compraron dos[num] entradas para el[ad] concierto.",
+  "Varios[ind] pájaros cantaban en aquellos[dem] árboles.",
+  "¿Cuántos[int] hermanos tienes?",
+  "La[ad] primera[num] pregunta era muy fácil.",
+  "Vuestra[pos] casa tiene cinco[num] ventanas.",
+  "Pocos[ind] niños saben esa[dem] canción.",
+  "Un[ai] gato negro dormía sobre la[ad] mesa.",
+  "Ninguna[ind] tienda abre los[ad] domingos.",
+  "Esos[dem] zapatos son de tu[pos] hermana.",
+  "Hoy celebramos el[ad] décimo[num] cumpleaños de Lucía.",
+  "Cualquier[ind] persona puede participar en este[dem] concurso.",
+  "Mis[pos] primos trajeron unos[ai] regalos preciosos.",
+  "¿Qué[int] color prefieres para tu[pos] habitación?",
+  "Otro[ind] día iremos a aquella[dem] playa.",
+  "Las[ad] cuatro[num] ruedas de la[ad] bici están nuevas.",
+  "Leí bastantes[ind] cuentos durante las[ad] vacaciones.",
+  "¡Cuánta[int] gente hay en la[ad] plaza!",
+  "Aquel[dem] edificio tiene veinte[num] pisos.",
+  "Este[dem] verano visitaremos a nuestros[pos] tíos.",
+  "Compré una[ai] camiseta azul para la[ad] fiesta.",
+  "Mi[pos] hermana pequeña tiene siete[num] años.",
+  "Aquellas[dem] montañas tienen mucha[ind] nieve.",
+];
+// "El[ad] perro…" -> [{t:"El",tipo:"ad"},{t:"perro"},…]
+const trocear=f=>f.split(" ").map(w=>{const m=w.match(/^(.*?)\[(\w+)\](.*)$/);return m?{t:m[1]+m[3],limpio:m[1].replace(/^[¿¡]/,""),tipo:m[2]}:{t:w}});
+const fraseLimpia=f=>f.replace(/\[\w+\]/g,"");
+const listaDets=ws=>ws.filter(w=>w.tipo).map(w=>`<b>${w.limpio}</b> (${TIPO_DET[w.tipo].n.toLowerCase()})`).join(", ");
+function qEncontrar(f){
+  const ws=trocear(f);
+  return {tipo:"multi",palabras:true,texto:"Toca todos los determinantes de la oración",items:ws.map(w=>w.t),ok:ws.map((w,i)=>w.tipo?i:-1).filter(i=>i>=0),
+    nota:"Los determinantes van delante del sustantivo y lo acompañan.",sol:`Los determinantes son: ${listaDets(ws)}.`};
+}
+const DEF_DET=[
+  ()=>op("¿Qué es un determinante?",["Una palabra que acompaña al sustantivo y concreta su significado","Una palabra que expresa una acción","Una palabra que sustituye al sustantivo","Una palabra que une oraciones"],"Los <b>determinantes</b> van delante del sustantivo y lo presentan o concretan: <i>el</i> libro, <i>mi</i> libro, <i>dos</i> libros.",{one:true}),
+  ()=>op("¿Dónde suele ir el determinante?",["Delante del sustantivo","Detrás del verbo","Al final de la oración","Solo al principio de la oración"],"El determinante va <b>delante del sustantivo</b> al que acompaña: <i>aquel</i> pueblo.",{one:true}),
+];
+const genEncontrar=()=>mezcla(sample(FRASES,9).map(qEncontrar),[pick(DEF_DET)()]);
+
+function qClasificar(f){
+  const ws=trocear(f),dets=ws.filter(w=>w.tipo),d=pick(dets);
+  let marcado=false;
+  const frase=ws.map(w=>{if(w===d&&!marcado){marcado=true;return `<mark>${w.t}</mark>`}return w.t}).join(" ");
+  const otros=sample(Object.keys(TIPO_DET).filter(k=>k!==d.tipo),3);
+  return op(`¿De qué tipo es el determinante ${Q(d.limpio)}?<div class="frase">${frase}</div>`,[TIPO_DET[d.tipo].n,...otros.map(k=>TIPO_DET[k].n)],
+    `<b>${d.limpio}</b> es un determinante <b>${TIPO_DET[d.tipo].n.toLowerCase()}</b>. ${TIPO_DET[d.tipo].d}`,{one:true});
+}
+function qClasificarLista(){
+  const tipo=pick(Object.keys(TIPO_DET));
+  const ejemplos={ad:"el, la, los, las",ai:"un, una, unos, unas",dem:"este, esa, aquellos",pos:"mi, tus, nuestra",num:"tres, veinte, segundo",ind:"algunos, pocas, varios",int:"qué, cuántos, cuánta"}[tipo];
+  const otros=sample(Object.keys(TIPO_DET).filter(k=>k!==tipo),3);
+  return op(`${Q(ejemplos)} son determinantes…`,[TIPO_DET[tipo].n,...otros.map(k=>TIPO_DET[k].n)],TIPO_DET[tipo].d,{one:true});
+}
+const genClasificar=()=>{
+  const fs=sample(FRASES,8);return mezcla(fs.map(qClasificar),veces(2,qClasificarLista));
+};
+
+/* =====================================================================
+   Vocales, diptongos e hiatos
+   ===================================================================== */
+const ABIERTAS="aeoáéó",CERRADAS="iuíú",TONICA_CERRADA="íú";
+const esAbierta=c=>ABIERTAS.includes(c.toLowerCase());
+const sinTilde=c=>c.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+// [palabra, pareja de vocales]
+const PAREJAS=[["puerta","ue"],["país","aí"],["poeta","oe"],["ciudad","iu"],["río","ío"],["aire","ai"],["tía","ía"],["peine","ei"],
+  ["cuidado","ui"],["leer","ee"],["teatro","ea"],["maíz","aí"],["baúl","aú"],["causa","au"],["nieve","ie"],["huevo","ue"],["oído","oí"],
+  ["reúne","eú"],["héroe","oe"],["piano","ia"],["agua","ua"],["boina","oi"],["Europa","Eu"],["caer","ae"],["océano","ea"],["día","ía"],
+  ["frío","ío"],["púa","úa"],["Raúl","aú"],["cuota","uo"],["viuda","iu"],["ruido","ui"],["veinte","ei"],["paella","ae"],["zoo","oo"],
+  ["creer","ee"],["león","eo"],["auto","au"],["Lucía","ía"],["reír","eí"],["sabía","ía"],["cielo","ie"],["guante","ua"],["museo","eo"]];
+function analiza(p){
+  const [a,b]=[...p],A=esAbierta(a),B=esAbierta(b);
+  if(sinTilde(a)===sinTilde(b))return{h:true,por:"son dos vocales iguales",tipos:A?"dos abiertas":"dos cerradas"};
+  if(A&&B)return{h:true,por:"son dos vocales abiertas",tipos:"dos abiertas"};
+  if(!A&&!B)return{h:false,por:"son dos vocales cerradas distintas",tipos:"dos cerradas"};
+  const cerr=A?b:a;
+  const tipos=A?"abierta + cerrada":"cerrada + abierta";
+  if(TONICA_CERRADA.includes(cerr))return{h:true,por:`la cerrada «${cerr}» es tónica (lleva tilde) y se separa de la abierta`,tipos};
+  return{h:false,por:"se juntan una vocal abierta y una cerrada átona",tipos};
+}
+const marcaPareja=(w,p)=>{const i=w.indexOf(p);return w.slice(0,i)+`<u class="vv">${p}</u>`+w.slice(i+p.length)};
+function qDiptongoHiato(par){
+  const [w,p]=par,a=analiza(p);
+  return op(`En <span class="palabra">${marcaPareja(w,p)}</span>, las vocales ${Q(p)} forman…`,a.h?["Hiato","Diptongo"]:["Diptongo","Hiato"],
+    `${a.h?"<b>Hiato</b>":"<b>Diptongo</b>"}: ${a.por}. ${a.h?"Se pronuncian en sílabas distintas.":"Se pronuncian en la misma sílaba."}`,{fijo:true,orden:["Diptongo","Hiato"]});
+}
+function qTiposPareja(par){
+  const [w,p]=par,a=analiza(p),ops=["abierta + cerrada","cerrada + abierta","dos abiertas","dos cerradas"];
+  return op(`En <span class="palabra">${marcaPareja(w,p)}</span>, ¿qué vocales se juntan?`,[a.tipos,...ops.filter(x=>x!==a.tipos)],
+    `${Q(p)}: ${[...p].map(c=>`${c} (${esAbierta(c)?"abierta":"cerrada"})`).join(" + ")}. Las abiertas son a, e, o; las cerradas, i, u.`,{fijo:true,orden:ops});
+}
+function qVocalTipo(){
+  const v=pick(["a","e","i","o","u"]),ab=esAbierta(v);
+  return op(`La vocal ${Q(v)} es…`,ab?["Abierta","Cerrada"]:["Cerrada","Abierta"],`Vocales <b>abiertas</b>: a, e, o. Vocales <b>cerradas</b>: i, u. Así que ${Q(v)} es <b>${ab?"abierta":"cerrada"}</b>.`,{fijo:true,orden:["Abierta","Cerrada"]});
+}
+const qMarcarVocales=abiertas=>({tipo:"multi",texto:`Toca las vocales ${abiertas?"abiertas":"cerradas"}`,items:["a","e","i","o","u"],ok:abiertas?["a","e","o"]:["i","u"],
+  sol:"Vocales <b>abiertas</b>: a, e, o. Vocales <b>cerradas</b>: i, u."});
+const genVocales=()=>mezcla([qMarcarVocales(true),qMarcarVocales(false)],veces(3,qVocalTipo),sample(PAREJAS,5).map(qTiposPareja));
+
+const DEF_DIPT=[
+  ()=>op("¿Qué es un diptongo?",["Dos vocales seguidas que se pronuncian en la misma sílaba","Dos vocales seguidas que se pronuncian en sílabas distintas","Dos consonantes seguidas","Una vocal con tilde"],"<b>Diptongo</b>: dos vocales seguidas en la misma sílaba, como <i>pue</i>-rta.",{one:true}),
+  ()=>op("¿Qué es un hiato?",["Dos vocales seguidas que se pronuncian en sílabas distintas","Dos vocales seguidas que se pronuncian en la misma sílaba","Una sílaba sin vocales","Tres vocales seguidas"],"<b>Hiato</b>: dos vocales seguidas en sílabas distintas, como po-<i>e</i>-ta.",{one:true}),
+  ()=>op("¿Cuándo se forma un diptongo?",["Al juntarse una abierta con una cerrada átona, o dos cerradas distintas","Al juntarse dos vocales abiertas","Al juntarse dos vocales iguales","Cuando la vocal cerrada lleva tilde"],"Hay <b>diptongo</b> con abierta + cerrada átona (ai-re), cerrada átona + abierta (pie-dra) o dos cerradas distintas (ciu-dad).",{one:true}),
+  ()=>op("¿Cuándo se forma un hiato?",["Al juntarse dos abiertas, dos vocales iguales, o una cerrada tónica con una abierta","Al juntarse dos cerradas distintas","Al juntarse una abierta con una cerrada átona","Nunca lleva tilde"],"Hay <b>hiato</b> con dos abiertas (te-a-tro), dos iguales (le-er) o cerrada tónica + abierta (rí-o, ma-íz).",{one:true}),
+  ()=>op(`En ${Q("río")}, la «í» lleva tilde porque…`,["es una cerrada tónica junto a una abierta y forma hiato","todas las palabras con «i» la llevan","es una palabra aguda","forma diptongo"],"Cuando la cerrada es tónica junto a una abierta, se separan (hiato) y la cerrada lleva tilde: <b>rí-o</b>, <b>ma-íz</b>.",{one:true}),
+];
+const genDiptongo=()=>mezcla(sample(PAREJAS,7).map(qDiptongoHiato),sample(DEF_DIPT,3).map(f=>f()));
+
+/* =====================================================================
+   La letra v
+   ===================================================================== */
+const REGLA={
+  nbd:"Después de n, b y d se escribe v: invierno, obvio, adverbio.",
+  eva:"Las palabras que empiezan por eva-, eve-, evi-, evo- se escriben con v (excepto ébano).",
+  adj:"Los adjetivos terminados en -avo, -ava, -ave, -evo, -eva, -eve, -ivo, -iva se escriben con v.",
+  verbo:"Las formas de los verbos estar, andar, tener e ir con este sonido se escriben con v: estuve, anduvo, tuvimos, voy.",
+  vice:"Las palabras que empiezan por vice- y villa- se escriben con v (excepto billar).",
+  voro:"Las palabras terminadas en -ívoro, -ívora se escriben con v (excepto víbora).",
+  aba:"Las terminaciones -aba, -abas, -ábamos… de los verbos acabados en -ar se escriben con b: cantaba.",
+  ble:"Las palabras terminadas en -ble y -bilidad se escriben con b: amable, posibilidad.",
+  blbr:"Delante de l y r se escribe b: blanco, brazo.",
+  mb:"Después de m se escribe b: también, cambio.",
+  bus:"Las palabras que empiezan por bu-, bur-, bus- se escriben con b: buscar, burbuja.",
+  bir:"Los verbos terminados en -bir se escriben con b (excepto hervir, servir y vivir): subir, escribir.",
+  biblio:"Las palabras que empiezan por biblio- se escriben con b: biblioteca.",
+};
+// Palabra con "_" donde va la letra; letra correcta; regla
+const PALABRAS_V=[
+  ["in_ierno","v","nbd"],["en_iar","v","nbd"],["con_encer","v","nbd"],["in_itar","v","nbd"],["ob_io","v","nbd"],["ad_erbio","v","nbd"],["in_entar","v","nbd"],["en_ase","v","nbd"],
+  ["e_aporar","v","eva"],["e_ento","v","eva"],["e_itar","v","eva"],["e_olución","v","eva"],["e_idente","v","eva"],["e_aluar","v","eva"],
+  ["octa_o","v","adj"],["bra_o","v","adj"],["nue_a","v","adj"],["le_e","v","adj"],["bre_e","v","adj"],["acti_o","v","adj"],["deporti_a","v","adj"],["sua_e","v","adj"],["gra_e","v","adj"],["atracti_o","v","adj"],
+  ["estu_e","v","verbo"],["andu_o","v","verbo"],["tu_imos","v","verbo"],["retu_o","v","verbo"],["_amos","v","verbo"],["_oy","v","verbo"],
+  ["_icepresidente","v","vice"],["_illancico","v","vice"],["_icedirector","v","vice"],["_illano","v","vice"],
+  ["herbí_oro","v","voro"],["carní_ora","v","voro"],["omní_oro","v","voro"],
+  ["canta_a","b","aba"],["jugá_amos","b","aba"],["amá_amos","b","aba"],["ama_le","b","ble"],["posi_ilidad","b","ble"],["agrada_le","b","ble"],
+  ["_lanco","b","blbr"],["_razo","b","blbr"],["ham_re","b","mb"],["tam_ién","b","mb"],["_uscar","b","bus"],["_urbuja","b","bus"],
+  ["su_ir","b","bir"],["escri_ir","b","bir"],["_iblioteca","b","biblio"],
+];
+const verPalabra=(w,l)=>w.replace("_",l?`<b>${l}</b>`:`<span class="hueco">?</span>`);
+function qBV(p){
+  const [w,l,r]=p;
+  return op(`¿${Q("b")} o ${Q("v")}? <span class="palabra">${verPalabra(w)}</span>`,l==="v"?["v","b"]:["b","v"],
+    `Se escribe <b>${w.replace("_",l)}</b>. ${REGLA[r]}`,{fijo:true,orden:["b","v"]});
+}
+const REGLAS_V=["nbd","eva","adj","verbo","vice","voro"];
+function qPorQue(){
+  const p=pick(PALABRAS_V.filter(x=>x[1]==="v")),[w,l,r]=p,palabra=w.replace("_","v");
+  return op(`¿Por qué ${Q(palabra)} se escribe con v?`,[REGLA[r],...sample(REGLAS_V.filter(x=>x!==r),3).map(x=>REGLA[x])],`${palabra}: ${REGLA[r]}`,{one:true});
+}
+const genV=()=>mezcla(sample(PALABRAS_V.filter(p=>p[1]==="v"),6).map(qBV),sample(PALABRAS_V.filter(p=>p[1]==="b"),2).map(qBV),veces(2,qPorQue));
+
+/* =====================================================================
+   Palabras polisémicas
+   ===================================================================== */
+// palabra: [[significado, oración con ___], …]
+const POLI={
+  banco:[["Asiento para varias personas","Nos sentamos en un ___ del parque."],["Lugar donde se guarda el dinero","Mi padre fue al ___ a sacar dinero."],["Grupo grande de peces","Vimos un ___ de sardinas."]],
+  hoja:[["Parte verde de las plantas","En otoño caen las ___s de los árboles."],["Trozo de papel","Escribe tu nombre en la ___."],["Parte cortante de un cuchillo","La ___ del cuchillo está afilada."]],
+  ratón:[["Animal pequeño roedor","El gato persigue a un ___."],["Aparato para manejar el ordenador","Haz clic con el ___."]],
+  sierra:[["Herramienta para cortar madera","Cortó la tabla con una ___."],["Conjunto de montañas","Fuimos de excursión a la ___."]],
+  cola:[["Parte final del cuerpo de algunos animales","El perro mueve la ___."],["Fila de personas que esperan","Hicimos ___ para entrar al cine."],["Pegamento","Pega el papel con ___."]],
+  planta:[["Ser vivo vegetal","Riega la ___ del salón."],["Piso de un edificio","Vivo en la tercera ___."],["Parte de abajo del pie","Me duele la ___ del pie."]],
+  pluma:[["Lo que cubre el cuerpo de las aves","Encontré una ___ de paloma."],["Instrumento para escribir con tinta","El abuelo escribe con ___."]],
+  copa:[["Vaso con pie","Brindaron con una ___."],["Parte de arriba de un árbol","El pájaro está en la ___ del árbol."],["Trofeo","Nuestro equipo ganó la ___."]],
+  carta:[["Mensaje escrito que se envía","Escribí una ___ a mi abuela."],["Naipe de la baraja","Me tocó una ___ de oros."],["Lista de platos de un restaurante","El camarero nos trajo la ___."]],
+  gato:[["Animal doméstico felino","El ___ duerme en el sofá."],["Herramienta para levantar el coche","Usó el ___ para cambiar la rueda."]],
+  pila:[["Batería pequeña","El mando no funciona: no tiene ___s."],["Montón de cosas","Hay una ___ de libros en la mesa."],["Fregadero","Deja los platos en la ___."]],
+  lengua:[["Órgano de la boca","Me mordí la ___."],["Idioma","El inglés es una ___ muy hablada."]],
+  estrella:[["Astro que brilla en el cielo","Esta noche se ve una ___ muy brillante."],["Persona muy famosa","Es una ___ del cine."]],
+};
+const POLI_KEYS=Object.keys(POLI);
+const conPalabra=(o,w)=>o.replace("___",`<mark>${w}</mark>`);
+function qSignificado(w){
+  const usos=POLI[w],i=Math.floor(Math.random()*usos.length),[sig,frase]=usos[i];
+  const otrosMismo=usos.filter((_,j)=>j!==i).map(u=>u[0]);
+  const ajena=pick(POLI_KEYS.filter(k=>k!==w));
+  const ops=[sig,...otrosMismo,...sample(POLI[ajena].map(u=>u[0]),Math.max(0,3-otrosMismo.length))].slice(0,4);
+  return op(`¿Qué significa ${Q(w)} en esta oración?<div class="frase">${conPalabra(frase,w)}</div>`,ops,
+    `Aquí <b>${w}</b> significa «${sig.toLowerCase()}». ${Q(w)} es polisémica: ${usos.map(u=>u[0].toLowerCase()).join("; ")}.`,{one:true});
+}
+function qCompletaPoli(w){
+  const usos=sample(POLI[w],2),otras=sample(POLI_KEYS.filter(k=>k!==w),3);
+  return op(`¿Qué palabra completa las dos oraciones?<div class="frase">${usos[0][1].replace("___","____")}<br>${usos[1][1].replace("___","____")}</div>`,[w,...otras],
+    `<b>${w}</b>: ${usos.map(u=>`${u[0].toLowerCase()} («${conPalabra(u[1],w).replace(/<\/?mark>/g,"")}»)`).join(" y ")}.`);
+}
+const DEF_POLI=[
+  ()=>op("¿Qué son las palabras polisémicas?",["Palabras que tienen varios significados","Palabras que suenan igual pero se escriben distinto","Palabras con el mismo significado","Palabras de significado contrario"],"Una palabra <b>polisémica</b> tiene <b>varios significados</b>: <i>banco</i> (asiento, lugar del dinero, grupo de peces).",{one:true}),
+  ()=>op(`${Q("Hoja")} de árbol y ${Q("hoja")} de papel son un ejemplo de…`,["Palabra polisémica","Palabras homófonas","Sinónimos","Antónimos"],"Es la misma palabra, escrita igual, con varios significados: es <b>polisémica</b>."),
+];
+const genPolisemicas=()=>{const ws=sample(POLI_KEYS,8);return mezcla(ws.slice(0,5).map(qSignificado),ws.slice(5).map(qCompletaPoli),DEF_POLI.map(f=>f()))};
+
+/* =====================================================================
+   Palabras homófonas
+   ===================================================================== */
+// grupo de palabras que suenan igual: [[palabra, significado, oración con ___], …]
+const HOMO=[
+  [["vaca","animal que da leche","La ___ da leche."],["baca","soporte en el techo del coche","Pusimos las maletas en la ___ del coche."]],
+  [["hola","saludo","Dile ___ a tu prima."],["ola","onda del mar","Una ___ enorme llegó a la playa."]],
+  [["tubo","pieza hueca y alargada","El agua sale por un ___."],["tuvo","del verbo tener","Ayer Ana ___ fiebre."]],
+  [["echo","del verbo echar","Siempre ___ sal a la ensalada."],["hecho","del verbo hacer","Ya he ___ los deberes."]],
+  [["botar","hacer saltar","Me gusta ___ la pelota."],["votar","elegir con un voto","Los mayores van a ___ en las elecciones."]],
+  [["bello","bonito","Es un paisaje muy ___."],["vello","pelo fino del cuerpo","Tiene mucho ___ en los brazos."]],
+  [["vaya","del verbo ir o exclamación","¡___ susto me has dado!"],["valla","cerca o barrera","Saltó la ___ del jardín."],["baya","fruto pequeño","El arándano es una ___."]],
+  [["hierba","planta pequeña","Las vacas comen ___."],["hierva","del verbo hervir","Espera a que el agua ___."]],
+  [["sabia","que sabe mucho","Mi abuela es muy ___."],["savia","líquido que recorre las plantas","La ___ sube por el tallo."]],
+  [["hasta","indica un límite","Caminamos ___ el río."],["asta","palo de la bandera o cuerno","La bandera ondea en el ___."]],
+  [["honda","profunda","La piscina es muy ___."],["onda","ondulación","Al tirar la piedra se formó una ___ en el agua."]],
+  [["vienes","del verbo venir","¿___ a mi casa esta tarde?"],["bienes","cosas que se poseen","Repartió sus ___ entre sus hijos."]],
+  [["ha","del verbo haber","Mi hermano ya ___ comido."],["a","preposición","Vamos ___ la playa."]],
+  [["hay","del verbo haber","___ un gato en el tejado."],["ay","exclamación de dolor","¡___, qué daño!"]],
+  [["cabo","punta de tierra en el mar","El barco rodeó el ___."],["cavo","del verbo cavar","Yo ___ un hoyo en el jardín."]],
+];
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+function qCompletaHomo(g){
+  const i=Math.floor(Math.random()*g.length),[w,sig,fr]=g[i];
+  const empieza=fr.replace(/^[¿¡]/,"").startsWith("___");
+  const forma=x=>empieza?cap(x):x;
+  return op(`Completa la oración<div class="frase">${fr.replace("___","____")}</div>`,[forma(w),...g.filter((_,j)=>j!==i).map(x=>forma(x[0]))],
+    g.map(x=>`<b>${x[0]}</b>: ${x[1]}`).join(". ")+`. Suenan igual, pero se escriben distinto y significan cosas diferentes.`,{orden:g.map(x=>forma(x[0])).sort((a,b)=>a.localeCompare(b,"es"))});
+}
+function qParejaHomofona(){
+  const g=pick(HOMO.filter(x=>x[0][0].length>2));
+  const malas=["casa / cosa","perro / pera","mesa / masa","gato / pato","sol / sal","banco / banco"];
+  return op("¿Cuál de estas parejas son palabras homófonas?",[`${g[0][0]} / ${g[1][0]}`,...sample(malas,3)],
+    `<b>${g[0][0]}</b> (${g[0][1]}) y <b>${g[1][0]}</b> (${g[1][1]}) suenan igual pero se escriben distinto. En las demás parejas las palabras no suenan igual o, como en banco / banco, es la misma palabra (polisémica).`);
+}
+const DEF_HOMO=[
+  ()=>op("¿Qué son las palabras homófonas?",["Palabras que suenan igual pero se escriben distinto y significan cosas diferentes","Palabras que tienen varios significados","Palabras que significan lo mismo","Palabras que riman"],"Las <b>homófonas</b> suenan igual pero se escriben de forma distinta y tienen significados diferentes: <i>vaca</i> y <i>baca</i>.",{one:true}),
+  ()=>op("¿En qué se diferencian las homófonas de las polisémicas?",["Las homófonas son palabras distintas que suenan igual; una polisémica es una sola palabra con varios significados","No se diferencian en nada","Las polisémicas se escriben con h","Las homófonas tienen siempre tilde"],"<i>Hola / ola</i> son dos palabras distintas (homófonas). <i>Banco</i> es una sola palabra con varios significados (polisémica).",{one:true}),
+];
+const genHomofonas=()=>mezcla(sample(HOMO,7).map(qCompletaHomo),[qParejaHomofona()],sample(DEF_HOMO,2).map(f=>f()));
+
+/* =====================================================================
+   Secciones del plan
+   ===================================================================== */
+const SECS_LENGUA={ // estrellas: [segundos para 3 estrellas, segundos para 2]
+  det_encontrar:{nombre:"Encontrar determinantes",estrellas:[80,130],gen:genEncontrar},
+  det_clasificar:{nombre:"Clasificar determinantes",estrellas:[60,100],gen:genClasificar},
+  vocales:{nombre:"Vocales",estrellas:[40,70],gen:genVocales},
+  diptongo:{nombre:"Diptongo e hiato",estrellas:[50,85],gen:genDiptongo},
+  letra_v:{nombre:"La letra v",estrellas:[45,80],gen:genV},
+  polisemicas:{nombre:"Polisémicas",estrellas:[60,100],gen:genPolisemicas},
+  homofonas:{nombre:"Homófonas",estrellas:[55,95],gen:genHomofonas},
+};
+
+/* =====================================================================
+   Teoría
+   ===================================================================== */
+const TEORIA_LENGUA={
+  det_encontrar:`<h3>¿Qué es un determinante?</h3><p>Es una palabra que va <b>delante del sustantivo</b> y lo presenta o concreta: <i>el</i> perro, <i>mi</i> perro, <i>dos</i> perros, <i>aquel</i> perro.</p>
+    <h3>Truco</h3><p>Busca primero los sustantivos (personas, animales, cosas). La palabra que va justo delante y los acompaña suele ser un determinante.</p>`,
+  det_clasificar:`<h3>Tipos de determinantes</h3><table>
+    <tr><th>Tipo</th><th>Ejemplos</th></tr>
+    <tr><td>Artículo determinado</td><td>el, la, los, las</td></tr>
+    <tr><td>Artículo indeterminado</td><td>un, una, unos, unas</td></tr>
+    <tr><td>Demostrativo</td><td>este, ese, aquel, esta, esos, aquellas…</td></tr>
+    <tr><td>Posesivo</td><td>mi, tu, su, nuestro, vuestro, mis, sus…</td></tr>
+    <tr><td>Numeral</td><td>dos, veinte (cardinales); primero, décimo (ordinales)</td></tr>
+    <tr><td>Indefinido</td><td>algún, muchos, pocos, varios, ningún, otro, cualquier, bastantes, todos…</td></tr>
+    <tr><td>Interrogativo o exclamativo</td><td>qué, cuánto, cuánta… (en preguntas y exclamaciones)</td></tr></table>`,
+  vocales:`<h3>Vocales abiertas y cerradas</h3><p><b>Abiertas:</b> a, e, o.<br><b>Cerradas:</b> i, u.</p><p>Al pronunciar las abiertas, la boca se abre más.</p>`,
+  diptongo:`<h3>Diptongo</h3><p>Dos vocales seguidas que se pronuncian en <b>la misma sílaba</b>: <i>pue</i>-rta, <i>ai</i>-re, <i>ciu</i>-dad.</p>
+    <p>Se forma con abierta + cerrada átona (ai, ei, oi, au…), cerrada átona + abierta (ia, ie, ua, ue…) o dos cerradas distintas (iu, ui).</p>
+    <h3>Hiato</h3><p>Dos vocales seguidas que se pronuncian en <b>sílabas distintas</b>: po-e-ta, rí-o.</p>
+    <p>Se forma con dos abiertas (te-a-tro), dos vocales iguales (le-er) o una cerrada tónica junto a una abierta, que lleva tilde (ma-íz, dí-a).</p>`,
+  letra_v:`<h3>Se escriben con v</h3><p>1. Después de n, b y d: invierno, obvio, adverbio.<br>2. Las palabras que empiezan por eva-, eve-, evi-, evo-: evitar, evento (excepto ébano).<br>3. Los adjetivos terminados en -avo, -ava, -ave, -evo, -eva, -eve, -ivo, -iva: octavo, nueva, breve, activo.<br>4. Las formas de estar, andar, tener e ir: estuve, anduvo, tuvimos, voy.<br>5. Las palabras que empiezan por vice- y villa-: vicepresidente, villancico (excepto billar).<br>6. Las terminadas en -ívoro, -ívora: herbívoro (excepto víbora).</p>
+    <h3>Para no confundirte, se escriben con b</h3><p>-aba (cantaba), -ble y -bilidad (amable), bl y br (blanco, brazo), mb (también), bu-, bur-, bus- (buscar), los verbos en -bir (subir; excepto hervir, servir, vivir) y biblio- (biblioteca).</p>`,
+  polisemicas:`<h3>Palabras polisémicas</h3><p>Son palabras que tienen <b>varios significados</b>. Se escriben y suenan igual; el significado depende de la oración.</p>
+    <p><b>banco:</b> asiento / lugar donde se guarda el dinero / grupo de peces.<br><b>hoja:</b> de un árbol / de papel / de un cuchillo.<br><b>ratón:</b> animal / aparato del ordenador.<br><b>sierra:</b> herramienta / conjunto de montañas.</p>`,
+  homofonas:`<h3>Palabras homófonas</h3><p>Son palabras que <b>suenan igual</b> pero <b>se escriben distinto</b> y tienen significados diferentes.</p>
+    <p>vaca (animal) / baca (del coche) · hola (saludo) / ola (del mar) · tubo (pieza hueca) / tuvo (de tener) · echo (de echar) / hecho (de hacer) · botar (saltar) / votar (elegir) · bello (bonito) / vello (pelo) · hierba (planta) / hierva (de hervir) · hay / ay · ha / a</p>`,
+};
+
+/* =====================================================================
+   Arranque
+   ===================================================================== */
+Quiz.init({secs:SECS_LENGUA,teoria:TEORIA_LENGUA,plan:{
+  juego:"lengua",
+  ach:LOGROS.lengua,
+  onFinish:(r)=>{
+    if(r.sec==="det_encontrar"&&!r.fallos)unlock("cazador");
+    if(r.sec==="letra_v"&&!r.fallos)unlock("ortografo");
+    if(["polisemicas","homofonas"].every(s=>progress.best[s]&&progress.best[s].stars===3))unlock("diccionario");
+  },
+}});
+</script>
+</body>
+</html>

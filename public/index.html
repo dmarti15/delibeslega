@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Planes de trabajo · 6º</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎒</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="comun/comun.css">
+<style>
+body{display:block;overflow:auto}
+header .who{margin-left:auto}
+.wrap{max-width:860px;margin:0 auto;padding:8px 16px 32px}
+.intro{color:var(--muted);font-weight:700;margin:4px 0 20px}
+.planes{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.plan{position:relative;display:flex;flex-direction:column;gap:6px;text-decoration:none;color:var(--ink);background:var(--panel);
+  border:2px solid var(--chip);border-radius:22px;padding:18px 18px 16px;box-shadow:0 6px 0 var(--acc);transition:transform .12s}
+a.plan:hover{transform:translateY(-3px)}
+a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
+.plan .ic{font-size:2.4rem;line-height:1}
+.plan .asig{font-weight:800;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--acc)}
+.plan h2{font-family:"Baloo 2",Nunito,sans-serif;font-size:1.45rem;line-height:1.1;margin:0}
+.plan p{margin:0;color:var(--muted);font-weight:700;font-size:.9rem;line-height:1.4}
+.plan .pie{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.plan .st{font-weight:800;color:var(--ink)}
+.plan .st span{color:var(--target)}
+.plan .ir{font-weight:800;background:var(--acc);color:#fff;border-radius:999px;padding:7px 14px;font-size:.9rem}
+.plan.soon{opacity:.6;box-shadow:0 6px 0 var(--chip)}
+.plan.soon .ir{background:var(--chip);color:var(--muted)}
+@media (max-width:560px){header{flex-wrap:nowrap}h1{font-size:1.3rem}.who{max-width:42vw}}
+.feed{margin-top:34px}
+.feed .h2{display:flex;align-items:center;gap:10px}
+.feedlist{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+.feedlist li{display:flex;align-items:center;gap:12px;background:var(--panel);border:2px solid var(--chip);border-radius:16px;padding:10px 14px}
+.feedlist li.nuevo{animation:entra .5s ease-out}
+.feedlist li.yo{border-color:var(--target)}
+.feedlist .fic{font-size:1.7rem;line-height:1;flex:none;width:2rem;text-align:center}
+.feedlist .ftx{font-weight:700;line-height:1.35;min-width:0}
+.feedlist .ftx small{display:block;color:var(--muted);font-size:.82rem}
+.feedlist .vacio{justify-content:center;color:var(--muted)}
+@keyframes entra{from{transform:translateY(-8px);opacity:0}}
+.soc{--acc:#2E7D9A}.mat{--acc:#C2410C}.len{--acc:#7C3AED}
+</style>
+</head>
+<body>
+<header>
+  <h1>Planes de trabajo</h1>
+  <button class="who" id="who">👤 <span id="whoTxt">Pon tu nombre</span></button>
+  <button class="icon" id="snd" aria-label="Activar o quitar el sonido">🔊</button>
+</header>
+<div class="wrap">
+  <p class="intro">Elige un plan para repasar. Tu nombre sirve para todos los rankings.</p>
+  <div class="planes">
+    <a class="plan soc" href="europa/">
+      <span class="ic">🗺️</span><span class="asig">Ciencias Sociales</span>
+      <h2>Europa</h2>
+      <p>Países, capitales, ríos, mares y océanos y sistemas montañosos.</p>
+      <div class="pie"><span class="st" data-juego="europa" data-n="5"></span><span class="ir">Jugar</span></div>
+    </a>
+    <a class="plan mat" href="mates/">
+      <span class="ic">🔢</span><span class="asig">Matemáticas</span>
+      <h2>Múltiplos, divisores y poliedros</h2>
+      <p>Múltiplos y divisores, criterios de divisibilidad, m.c.d., m.c.m. y poliedros.</p>
+      <div class="pie"><span class="st" data-juego="mates" data-n="8"></span><span class="ir">Jugar</span></div>
+    </a>
+    <a class="plan len" href="lengua/">
+      <span class="ic">📖</span><span class="asig">Lengua</span>
+      <h2>Determinantes, diptongos y palabras</h2>
+      <p>Determinantes, vocales, diptongo e hiato, la letra v, palabras polisémicas y homófonas.</p>
+      <div class="pie"><span class="st" data-juego="lengua" data-n="7"></span><span class="ir">Jugar</span></div>
+    </a>
+  </div>
+  <section class="feed" aria-live="polite">
+    <h2 class="h2">🏅 Últimos logros</h2>
+    <ol class="feedlist" id="feed"><li class="vacio">Cargando…</li></ol>
+  </section>
+</div>
+<script src="comun/comun.js"></script>
+<script src="comun/logros.js"></script>
+<script>
+Plan.init({onJugador:()=>Promise.all(["europa","mates","lengua"].map(syncJuego)).then(pintarEstrellas)});
+function pintarEstrellas(){
+  document.querySelectorAll(".st[data-juego]").forEach(s=>{
+    const p=LS.get(s.dataset.juego+":progress",{best:{}}),n=+s.dataset.n;
+    const st=Object.values(p.best||{}).reduce((t,b)=>t+(b.stars||0),0);
+    s.innerHTML=`<span>★</span> ${st} de ${n*3}`;
+  });
+}
+pintarEstrellas();
+// Estrellas guardadas en el servidor (por si se borraron los datos del navegador)
+Promise.all(["europa","mates","lengua"].map(syncJuego)).then(pintarEstrellas);
+
+/* ---------- Últimos logros de todos los jugadores ---------- */
+function hace(f){
+  const s=Math.max(0,(Date.now()-new Date(f))/1000);
+  if(s<60)return "hace un momento";
+  if(s<3600)return `hace ${Math.floor(s/60)} min`;
+  if(s<86400){const h=Math.floor(s/3600);return `hace ${h} ${h===1?"hora":"horas"}`}
+  const d=Math.floor(s/86400);
+  return d<7?`hace ${d} ${d===1?"día":"días"}`:new Date(f).toLocaleDateString("es-ES",{day:"numeric",month:"short"});
+}
+let vistos=null;
+async function cargarFeed(){
+  const ol=$("feed");
+  try{
+    const j=await apiGet("feed=1");
+    const items=j.logros.map(e=>{const a=(LOGROS[e.juego]||[]).find(x=>x.id===e.logro);return a?{...e,a}:null}).filter(Boolean);
+    if(!items.length){ol.innerHTML=`<li class="vacio">Todavía nadie ha conseguido logros. ¡Sé el primero!</li>`;vistos=new Set();return}
+    const clave=e=>e.alias+e.juego+e.logro+e.fecha;
+    ol.innerHTML=items.map(e=>`<li class="${vistos&&!vistos.has(clave(e))?"nuevo ":""}${e.alias===profile.alias?"yo":""}">
+      <span class="fic">${e.a.icon}</span>
+      <span class="ftx"><b>${esc(e.alias)}</b> ha conseguido <b>${esc(e.a.name)}</b><small>${PLAN_NOMBRE[e.juego]} · ${hace(e.fecha)}</small></span></li>`).join("");
+    vistos=new Set(items.map(clave));
+  }catch(e){ol.innerHTML=`<li class="vacio">No se pueden cargar los logros ahora.</li>`}
+}
+cargarFeed();
+setInterval(()=>{if(!document.hidden)cargarFeed()},30000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)cargarFeed()});
+</script>
+</body>
+</html>

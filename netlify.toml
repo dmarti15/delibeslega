@@ -1,0 +1,8 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  # Empaqueta @netlify/blobs dentro de la función. Si falta node_modules,
+  # el deploy falla con un error claro en vez de fallar luego en producción.
+  node_bundler = "esbuild"
