@@ -105,9 +105,22 @@ async function syncJuego(juego, umbrales) {
     return mez;
   } catch (e) { return null; }
 }
+// Si se cambian los umbrales de estrellas, las mejores marcas ya guardadas se recalculan
+// (solo se suben estrellas, nunca se quitan)
+function recalcularEstrellas() {
+  if (CFG.porAciertos) return false;
+  let cambio = false;
+  for (const s in progress.best || {}) {
+    const b = progress.best[s], c = CFG.secciones[s];
+    if (!c || b.score == null) continue;
+    const st = b.score <= c.estrellas[0] ? 3 : b.score <= c.estrellas[1] ? 2 : 1;
+    if (st > (b.stars || 0)) { b.stars = st; cambio = true; }
+  }
+  return cambio;
+}
 async function syncProgreso() {
   const mez = await syncJuego(CFG.juego, CFG.secciones);
-  if (mez) { progress = Object.assign({ best: {}, ach: {} }, JSON.parse(JSON.stringify(CFG.progresoExtra || {})), mez); renderLogros(); }
+  if (mez) { progress = Object.assign({ best: {}, ach: {} }, JSON.parse(JSON.stringify(CFG.progresoExtra || {})), mez); if (recalcularEstrellas()) saveProgress(); renderLogros(); }
 }
 let pendingRank = null;
 
@@ -437,6 +450,7 @@ const Plan = {
       $("rkSecs").onclick = e => { const b = e.target.closest("[data-rk]"); if (!b) return; rkSec = b.dataset.rk; renderRkSecs(); loadRanking(); };
       if ($("rkReload")) $("rkReload").onclick = () => loadRanking();
     }
+    if (CFG.juego && recalcularEstrellas()) saveProgress();
     updWho(); renderLogros(); enviarLogros();
     if (CFG.juego && profile.alias) syncProgreso();
 
