@@ -1,9 +1,15 @@
-# Configuración de Cloudflare Pages
+# Configuración de Cloudflare Workers (web estática + API del ranking)
+# name tiene que coincidir con el nombre del proyecto en Cloudflare
 name = "planes"
-pages_build_output_dir = "public"
+main = "functions/worker.js"
 compatibility_date = "2026-10-01"
 
-# Base de datos del ranking. Sustituye database_id por el que te da: npx wrangler d1 create planes
+# Ficheros de la web; lo que no sea un fichero (por ejemplo /api/ranking) lo responde el Worker
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Base de datos del ranking
 [[d1_databases]]
 binding = "DB"
 database_name = "planes"
