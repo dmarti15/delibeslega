@@ -1,5 +1,8 @@
 # Planes de trabajo (6º de primaria)
 
+> Alojamiento: Cloudflare Pages + D1 (ver `MIGRACION-CLOUDFLARE.md`). La API está en
+> `functions/api/ranking.js`; `netlify/functions/ranking.mjs` es la versión anterior para Netlify.
+
 Juegos de repaso con ranking. Cada dispositivo tiene un id oculto y un nombre
 que se puede cambiar; al cambiarlo se actualiza en todos los rankings.
 

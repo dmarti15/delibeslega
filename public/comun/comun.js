@@ -157,8 +157,8 @@ function logrosBase({ pistas = true, primero = "Primer paso", pleno = "Pleno", t
     { id: "primera", icon: "🧭", name: primero, desc: "Termina cualquier sección." },
     pistas && { id: "sinpistas", icon: "🧠", name: "Sin pistas", desc: "Termina una sección del temario sin pedir pistas." },
     { id: "punteria", icon: "🎯", name: "Puntería", desc: "Termina una sección del temario sin ningún fallo." },
-    { id: "racha10", icon: "🔥", name: "Racha de 10", desc: "Acierta 10 seguidos." },
-    { id: "racha25", icon: "☄️", name: "Imparable", desc: "Acierta 25 seguidos." },
+    { id: "racha10", icon: "🔥", name: "Racha de 10", desc: tiempo ? "Acierta 10 seguidos." : "Acierta 10 seguidos (la racha sigue de una partida a otra si no fallas)." },
+    { id: "racha25", icon: "☄️", name: "Imparable", desc: tiempo ? "Acierta 25 seguidos." : "Acierta 25 seguidos (la racha sigue de una partida a otra si no fallas)." },
     tiempo ? { id: "velocista", icon: "⚡", name: "Velocista", desc: "Consigue 3 estrellas en una sección." }
            : { id: "velocista", icon: "⭐", name: "Tres estrellas", desc: "Consigue 3 estrellas en una sección." },
     { id: "pleno", icon: "🏆", name: pleno, desc: "Consigue 3 estrellas en todas las secciones." },

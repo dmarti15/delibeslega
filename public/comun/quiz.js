@@ -10,6 +10,8 @@ const resume=()=>{if(run&&run.pauseAt!=null){run.paused+=performance.now()-run.p
 function arm(){if(run&&run.t0==null&&viewOn("playview"))run.t0=performance.now()}
 
 const PREGUNTAS_EXAMEN=10;
+// Racha de aciertos seguidos: continúa de una partida de práctica a la siguiente mientras no se falle
+let racha=0;
 // Examen: 10 preguntas al azar. Las secciones con enExamen:n aportan n preguntas (p. ej. 2 problemas);
 // el resto, al menos una cada una, y lo que falte se completa al azar
 function crearExamen(){
@@ -26,7 +28,7 @@ function start(list){
   const qs=list?list.map(q=>({...q,again:false})):examen?crearExamen():SECS[sec].gen();
   qs.forEach(q=>{q.base=q});
   queue=qs;total=qs.length;done=0;failed=[];requeued=new Set();busy=false;
-  run={sec,t0:null,paused:0,pauseAt:null,fallos:0,pistas:0,streak:0,retry:!!list,todo:false,done:false,examen,aciertos:0,base:qs.length};
+  run={sec,t0:null,paused:0,pauseAt:null,fallos:0,pistas:0,streak:examen?0:racha,retry:!!list,todo:false,done:false,examen,aciertos:0,base:qs.length};
   $("qsec").textContent=examen?"📝 Examen":sec==="examen"?"Práctica de los fallos del examen":SECS[sec].nombre;$("time").textContent="0:00";
   next();arm();
 }
@@ -100,12 +102,12 @@ function resolve(ok){
     done++;updHead();setTimeout(next,350);return;
   }
   if(ok){
-    tone("ok");if(!cur.again){run.streak++;streakHit(run.streak)}
+    tone("ok");if(!cur.again){run.streak++;racha=run.streak;streakHit(run.streak)}
     if(!cur.again&&!run.retry&&SECS[sec]&&SECS[sec].contador)problemaResuelto();
     done++;updHead();const c=$("qcard");c.classList.remove("flash");void c.offsetWidth;c.classList.add("flash");
     setTimeout(next,600);
   }else{
-    tone("bad");run.fallos++;run.streak=0;
+    tone("bad");run.fallos++;run.streak=0;racha=0;
     if(!failed.includes(cur.base))failed.push(cur.base);
     if(!requeued.has(cur.base)){requeued.add(cur.base);queue.splice(Math.min(queue.length,2+Math.floor(Math.random()*3)),0,{...cur.base,again:true});total++}
     updHead();pause();

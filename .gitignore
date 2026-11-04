@@ -18,3 +18,11 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+# Migración a Cloudflare: datos de los alumnos (no subir a GitHub) y caché local de wrangler
+datos-netlify.json
+importar.sql
+.wrangler/
+
+datos-netlify.json
+importar.sql
+.wrangler/

@@ -177,9 +177,9 @@ const sinTilde=c=>c.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(
 // [palabra, pareja de vocales]
 const PAREJAS=[["puerta","ue"],["país","aí"],["poeta","oe"],["ciudad","iu"],["río","ío"],["aire","ai"],["tía","ía"],["peine","ei"],
   ["cuidado","ui"],["leer","ee"],["teatro","ea"],["maíz","aí"],["baúl","aú"],["causa","au"],["nieve","ie"],["huevo","ue"],["oído","oí"],
-  ["reúne","eú"],["héroe","oe"],["piano","ia"],["agua","ua"],["boina","oi"],["Europa","Eu"],["caer","ae"],["océano","ea"],["día","ía"],
+  ["reúne","eú"],["héroe","oe"],["piano","ia"],["agua","ua"],["boina","oi"],["Europa","Eu"],["caer","ae"],["océano","éa"],["día","ía"],
   ["frío","ío"],["púa","úa"],["Raúl","aú"],["cuota","uo"],["viuda","iu"],["ruido","ui"],["veinte","ei"],["paella","ae"],["zoo","oo"],
-  ["creer","ee"],["león","eo"],["auto","au"],["Lucía","ía"],["reír","eí"],["sabía","ía"],["cielo","ie"],["guante","ua"],["museo","eo"]];
+  ["creer","ee"],["león","eó"],["auto","au"],["Lucía","ía"],["reír","eí"],["sabía","ía"],["cielo","ie"],["guante","ua"],["museo","eo"]];
 function analiza(p){
   const [a,b]=[...p],A=esAbierta(a),B=esAbierta(b);
   if(sinTilde(a)===sinTilde(b))return{h:true,por:"son dos vocales iguales",tipos:A?"dos abiertas":"dos cerradas"};
@@ -190,7 +190,8 @@ function analiza(p){
   if(TONICA_CERRADA.includes(cerr))return{h:true,por:`la cerrada «${cerr}» es tónica (lleva tilde) y se separa de la abierta`,tipos};
   return{h:false,por:"se juntan una vocal abierta y una cerrada átona",tipos};
 }
-const marcaPareja=(w,p)=>{const i=w.indexOf(p);return w.slice(0,i)+`<u class="vv">${p}</u>`+w.slice(i+p.length)};
+// Subraya la pareja de vocales en la palabra (si no aparece tal cual, la palabra se muestra sin marcar)
+const marcaPareja=(w,p)=>{const i=w.indexOf(p);return i<0?w:w.slice(0,i)+`<u class="vv">${p}</u>`+w.slice(i+p.length)};
 function qDiptongoHiato(par){
   const [w,p]=par,a=analiza(p);
   return op(`En <span class="palabra">${marcaPareja(w,p)}</span>, las vocales ${Q(p)} forman…`,a.h?["Hiato","Diptongo"]:["Diptongo","Hiato"],
