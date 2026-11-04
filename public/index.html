@@ -42,6 +42,7 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
 .feedlist .ftx small{display:block;color:var(--muted);font-size:.82rem}
 .feedlist .vacio{justify-content:center;color:var(--muted)}
 @keyframes entra{from{transform:translateY(-8px);opacity:0}}
+.tbl{--acc:#15803D}.cn{--acc:#0E7490}
 .soc{--acc:#2E7D9A}.mat{--acc:#C2410C}.len{--acc:#7C3AED}
 </style>
 </head>
@@ -63,7 +64,7 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
     <a class="plan mat" href="mates/">
       <span class="ic">🔢</span><span class="asig">Matemáticas</span>
       <h2>Múltiplos, divisores y poliedros</h2>
-      <p>Múltiplos y divisores, criterios de divisibilidad, m.c.d., m.c.m. y poliedros.</p>
+      <p>Múltiplos y divisores, primos, criterios de divisibilidad, m.c.d., m.c.m., poliedros y cuerpos redondos.</p>
       <div class="pie"><span class="st" data-juego="mates" data-tipo="examen"></span><span class="ir">Jugar</span></div>
     </a>
     <a class="plan len" href="lengua/">
@@ -72,6 +73,18 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
       <p>Determinantes, vocales, diptongo e hiato, la letra v, palabras polisémicas y homófonas.</p>
       <div class="pie"><span class="st" data-juego="lengua" data-tipo="examen"></span><span class="ir">Jugar</span></div>
     </a>
+    <a class="plan tbl" href="tablas/">
+      <span class="ic">✖️</span><span class="asig">Matemáticas · Repaso</span>
+      <h2>Tablas de multiplicar</h2>
+      <p>De la tabla del 2 a la del 10: multiplicar, el número que falta y dividir.</p>
+      <div class="pie"><span class="st" data-juego="tablas" data-tipo="examen"></span><span class="ir">Jugar</span></div>
+    </a>
+    <div class="plan cn soon" aria-disabled="true">
+      <span class="ic">🔬</span><span class="asig">Ciencias Naturales</span>
+      <h2>Próximamente</h2>
+      <p>Muy pronto, el plan de trabajo de Ciencias Naturales.</p>
+      <div class="pie"><span class="st"></span><span class="ir">Pronto</span></div>
+    </div>
   </div>
   <section class="feed" aria-live="polite">
     <h2 class="h2">🏅 Últimos logros</h2>
@@ -81,7 +94,7 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
 <script src="comun/comun.js"></script>
 <script src="comun/logros.js"></script>
 <script>
-Plan.init({onJugador:()=>Promise.all(["europa","mates","lengua"].map(syncJuego)).then(pintarEstrellas)});
+Plan.init({onJugador:()=>Promise.all(["europa","mates","lengua","tablas"].map(syncJuego)).then(pintarEstrellas)});
 // Resumen de cada plan: logros conseguidos y, según el plan, estrellas (Europa) o mejor examen (Mates, Lengua)
 function pintarEstrellas(){
   document.querySelectorAll(".st[data-juego]").forEach(s=>{
@@ -100,7 +113,7 @@ function pintarEstrellas(){
 }
 pintarEstrellas();
 // Estrellas guardadas en el servidor (por si se borraron los datos del navegador)
-Promise.all(["europa","mates","lengua"].map(syncJuego)).then(pintarEstrellas);
+Promise.all(["europa","mates","lengua","tablas"].map(syncJuego)).then(pintarEstrellas);
 
 /* ---------- Últimos logros de todos los jugadores ---------- */
 function hace(f){

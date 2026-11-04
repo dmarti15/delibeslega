@@ -65,3 +65,8 @@
 .qtext.largo{font-family:Nunito,system-ui,sans-serif;font-size:1.15rem;line-height:1.5;font-weight:800}
 /* En los planes de preguntas el tiempo no cuenta: se mide para los minutos jugados, pero no se muestra */
 .qhead .clock{display:none}
+/* Cuadrícula grande (criba de Eratóstenes) y números ya tachados */
+.nums.criba{grid-template-columns:repeat(10,1fr);gap:4px}
+.nums.criba .num{font-size:.95rem;padding:6px 0;min-height:38px;border-radius:9px}
+.num.tachado{text-decoration:line-through;opacity:.35;cursor:default}
+@media (max-width:560px){.nums.criba .num{font-size:.82rem;min-height:34px}}

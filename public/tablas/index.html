@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tablas de multiplicar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✖️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../comun/comun.css">
+<link rel="stylesheet" href="../comun/quiz.css">
+<style>
+/* Estilos propios del repaso de tablas */
+.qtext .grande{display:block;font-size:2.6rem;text-align:center;margin:6px 0 2px;letter-spacing:1px}
+.qtext .grande .n{color:var(--river)}
+.qtext .grande .hueco{display:inline-block;min-width:1.4em;border-bottom:5px solid var(--target);color:var(--target)}
+#teo table.tabla td{font-size:1.1rem;padding:3px 14px}
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../" aria-label="Volver a los planes de trabajo">‹</a>
+  <h1>Tablas</h1>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-view="playview">Jugar</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="rankview">Ranking</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="logview">Logros</button>
+  </div>
+  <button class="who" id="who">👤 <span id="whoTxt">Pon tu nombre</span></button>
+  <button class="icon" id="snd" aria-label="Activar o quitar el sonido">🔊</button>
+</header>
+<main>
+  <section class="view on" id="playview">
+    <div class="bar"><div class="modes" id="modes"></div><button class="btn" id="teoBtn">📖 Teoría</button></div>
+    <div class="playarea">
+    <div class="mstage" id="stage">
+      <div class="qcard" id="qcard">
+        <div class="qhead"><span id="qsec"></span><span class="spacer"></span><span class="streak" id="streak"></span><span id="prog"></span><span class="clock" id="time">0:00</span></div>
+        <div class="qtext" id="qtext"></div>
+        <div id="qans"></div>
+        <div class="qfb" id="qfb" hidden></div>
+      </div>
+    </div>
+    <div class="end" id="end"><div class="card">
+      <div class="stars" id="endStars"></div>
+      <div class="big" id="endBig"></div>
+      <p id="endTxt"></p>
+      <div id="endRank"></div>
+      <div class="row"><button class="btn" id="again">Jugar otra vez</button><button class="btn main" id="retry">Repasar los fallos</button></div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="view page" id="rankview">
+    <div class="page-inner">
+      <div class="cap-top"><h2>Ranking</h2><span class="spacer"></span><button class="btn" id="rkReload">Actualizar</button></div>
+      <div class="bar" style="padding:0 0 14px" id="rkSecs"></div>
+      <div id="rkBody"></div>
+      <p class="note">El ranking es el del 📝 Examen: 10 preguntas de todas las secciones, cada acierto es 1 punto de nota y media estrella; con la misma nota, va primero quien la sacó antes. Las prácticas no entran en el ranking, pero suman minutos jugados y partidas.</p>
+    </div>
+  </section>
+
+  <section class="view page" id="logview">
+    <div class="page-inner">
+      <h2 class="h2">Tus estrellas</h2>
+      <div class="secs" id="lgSecs"></div>
+      <h2 class="h2">Logros <span class="note" id="lgCount"></span></h2>
+      <div class="ach" id="lgAch"></div>
+      <p class="note">Las estrellas y los logros se guardan con tu nombre: si entras desde otro dispositivo o se borran los datos del navegador, se recuperan al poner tu nombre.</p>
+    </div>
+  </section>
+</main>
+<dialog id="teo"><div id="teoBody"></div><div class="drow"><button class="btn main" id="teoClose">Entendido</button></div></dialog>
+
+<script src="../comun/comun.js"></script>
+<script src="../comun/logros.js"></script>
+<script src="../comun/quiz.js"></script>
+<script>
+/* =====================================================================
+   Utilidades
+   ===================================================================== */
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const sample=(arr,k)=>shuffle(arr).slice(0,k);
+const mezcla=(...g)=>shuffle(g.flat());
+const range=(a,b)=>Array.from({length:b-a+1},(_,i)=>a+i);
+const N=x=>`<span class="n">${x}</span>`;
+const grande=html=>`<span class="grande">${html}</span>`;
+const HUECO=`<span class="hueco">?</span>`;
+const op=(texto,ops,sol,extra={})=>({tipo:"op",texto,ops,ok:0,sol,...extra});
+
+/* =====================================================================
+   Preguntas de una tabla
+   ===================================================================== */
+const TRUCO={
+  2:"Multiplicar por 2 es calcular el doble.",
+  3:"La tabla del 3 va de 3 en 3: 3, 6, 9, 12…",
+  4:"Multiplicar por 4 es hacer el doble del doble.",
+  5:"Los resultados de la tabla del 5 terminan siempre en 0 o en 5.",
+  6:"Por 6 es lo mismo que por 5 y sumar una vez más el número.",
+  7:"La más difícil: repasa sobre todo 7 × 6 = 42, 7 × 7 = 49 y 7 × 8 = 56 (5, 6, 7, 8).",
+  8:"Multiplicar por 8 es hacer el doble de multiplicar por 4.",
+  9:"En la tabla del 9 las cifras del resultado suman 9 (9 × 7 = 63 → 6 + 3 = 9).",
+  10:"Multiplicar por 10 es añadir un cero al final.",
+};
+const solMult=(a,b)=>`<b>${a} × ${b} = ${a*b}</b>. ${TRUCO[a]||TRUCO[b]||""}`;
+// a × b = ?  (a veces al revés: b × a, que da lo mismo)
+function qProducto(n,k){
+  const [a,b]=Math.random()<.7?[n,k]:[k,n];
+  return {tipo:"num",texto:grande(`${N(a)} × ${N(b)} = ${HUECO}`),resp:a*b,sol:solMult(n,k)};
+}
+// n × ? = producto
+function qFactor(n,k){
+  return {tipo:"num",texto:"¿Qué número falta?"+grande(`${N(n)} × ${HUECO} = ${N(n*k)}`),resp:k,sol:`${n} × <b>${k}</b> = ${n*k}. Busca en la tabla del ${n} el resultado ${n*k}.`};
+}
+// producto : n = ?
+function qDivision(n,k){
+  return {tipo:"num",texto:grande(`${N(n*k)} : ${N(n)} = ${HUECO}`),resp:k,sol:`${n*k} : ${n} = <b>${k}</b>, porque ${n} × ${k} = ${n*k}. Dividir es lo contrario de multiplicar.`};
+}
+// Opciones con resultados parecidos (los errores típicos: la fila de al lado)
+function qOpciones(n,k){
+  const r=n*k,cand=new Set([n*(k+1),n*(k-1),(n+1)*k,(n-1)*k,r+1,r-1,r+10].filter(x=>x>0&&x!==r));
+  return op(`¿Cuánto es ${N(n)} × ${N(k)}?`,[String(r),...sample([...cand],3).map(String)],solMult(n,k));
+}
+function preguntasTabla(n,cuantas){
+  const ks=shuffle(range(1,10)).slice(0,cuantas);
+  const tipos=shuffle([qProducto,qProducto,qProducto,qProducto,qProducto,qFactor,qFactor,qDivision,qDivision,qOpciones]);
+  return ks.map((k,i)=>tipos[i](n,k));
+}
+const genTabla=n=>()=>shuffle(preguntasTabla(n,10));
+const genTodas=()=>shuffle(range(1,10).map(()=>{const n=pick(range(2,10)),k=pick(range(2,10));return pick([qProducto,qProducto,qProducto,qFactor,qDivision,qOpciones])(n,k)}));
+
+/* =====================================================================
+   Secciones
+   ===================================================================== */
+const SECS_TABLAS={}; // estrellas: [3★, 2★] (no se usan: las estrellas van por aciertos)
+for(const n of range(2,10))SECS_TABLAS["t"+n]={nombre:`Tabla del ${n}`,corto:`× ${n}`,estrellas:[60,100],gen:genTabla(n)};
+SECS_TABLAS.mezcla={nombre:"Todas mezcladas",corto:"🎲 Todas",estrellas:[60,100],gen:genTodas};
+
+/* =====================================================================
+   Teoría: cada tabla completa con su truco
+   ===================================================================== */
+const TEORIA_TABLAS={};
+for(const n of range(2,10))TEORIA_TABLAS["t"+n]=`<h3>Tabla del ${n}</h3><table class="tabla">${range(1,10).map(k=>`<tr><td>${n} × ${k}</td><td><b>${n*k}</b></td></tr>`).join("")}</table><h3>Truco</h3><p>${TRUCO[n]}</p>`;
+TEORIA_TABLAS.mezcla=`<h3>Trucos de todas las tablas</h3><p>${range(2,10).map(n=>`<b>× ${n}:</b> ${TRUCO[n]}`).join("<br>")}</p><p>El orden no importa: 3 × 8 es lo mismo que 8 × 3.</p>`;
+
+/* =====================================================================
+   Arranque
+   ===================================================================== */
+Quiz.init({secs:SECS_TABLAS,teoria:TEORIA_TABLAS,plan:{
+  juego:"tablas",
+  ach:LOGROS.tablas,
+  onFinish:(r)=>{
+    if(r.sec==="mezcla"&&!r.fallos)unlock("todas");
+    if(["t7","t8","t9"].every(s=>progress.best[s]&&progress.best[s].stars===3))unlock("domador");
+  },
+}});
+</script>
+</body>
+</html>

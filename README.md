@@ -1,8 +1,5 @@
 # Planes de trabajo (6º de primaria)
 
-> Alojamiento: Cloudflare Pages + D1 (ver `MIGRACION-CLOUDFLARE.md`). La API está en
-> `functions/api/ranking.js`; `netlify/functions/ranking.mjs` es la versión anterior para Netlify.
-
 Juegos de repaso con ranking. Cada dispositivo tiene un id oculto y un nombre
 que se puede cambiar; al cambiarlo se actualiza en todos los rankings.
 
@@ -12,6 +9,7 @@ que se puede cambiar; al cambiarlo se actualiza en todos los rankings.
 - `public/europa/index.html` — Ciencias Sociales: Europa.
 - `public/mates/index.html` — Matemáticas: múltiplos, divisores y poliedros.
 - `public/lengua/index.html` — Lengua: determinantes, diptongos, la v, polisémicas y homófonas.
+- `public/tablas/index.html` — Repaso de las tablas de multiplicar.
 - `public/comun/quiz.js`, `quiz.css` — motor de preguntas que usan mates y lengua.
 - `public/comun/logros.js` — catálogo de logros de todos los planes (lo usa también la portada).
 - `netlify/functions/ranking.mjs` — API `/api/ranking` (datos en Netlify Blobs).
@@ -43,8 +41,9 @@ Europa tiene ranking de tiempos por sección. Mates y lengua tienen prácticas p
 
 Planes y secciones:
 - europa: paises, rios, mares, montanas, capitales
-- mates: conceptos, multiplos, divisores, divisibilidad, mcd, mcm, poliedros_partes, poliedros_tipos, problemas
+- mates: conceptos, multiplos, divisores, divisibilidad, mcd, mcm, poliedros_partes, poliedros_tipos, primos, redondos, problemas
 - lengua: det_encontrar, det_clasificar, vocales, diptongo, letra_v, polisemicas, homofonas
+- tablas: t2 … t10, mezcla
 
 ## Últimos logros
 La portada muestra los 30 últimos logros conseguidos por cualquier jugador (se guardan en

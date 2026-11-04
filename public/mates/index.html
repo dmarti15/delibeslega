@@ -131,7 +131,21 @@ const DEF_CONCEPTOS=[
   ()=>op("Todo número es múltiplo de…",["sí mismo y de 1","solo de sí mismo","solo de 2","ningún número"],"7 = 7 × 1, así que 7 es múltiplo de 7 y de 1."),
   ()=>op("El primer múltiplo (sin contar el 0) de un número es…",["el propio número","el 1","su mitad","el 10"],"Se obtiene multiplicándolo por 1: 8 × 1 = 8."),
 ];
-const genConceptos=()=>mezcla(veces(3,qEsMultiplo),veces(2,qEsDivisor),veces(2,qRelacion),sample(DEF_CONCEPTOS,3).map(f=>f()));
+// Verdadero o falso con "porque", como en las fichas de clase: algunos razonamientos son trampas típicas
+const vf=(texto,verdad,sol)=>({tipo:"op",texto:`¿Verdadero o falso?<div class="frase">${texto}</div>`,ops:["Verdadero","Falso"],ok:verdad?0:1,fijo:true,sol});
+const PORQUE=[
+  ()=>{const a=rnd(3,12),k=rnd(3,12);return vf(`${a*k} es múltiplo de ${a} porque ${a} × ${k} = ${a*k}.`,true,`<b>Verdadero:</b> si al multiplicar ${a} por un número sale ${a*k}, ${a*k} es múltiplo de ${a}.`)},
+  ()=>{const d=rnd(2,9),k=rnd(3,12),n=d*k;return vf(`${d} es divisor de ${n} porque ${n} : ${d} es una división exacta.`,true,`<b>Verdadero:</b> ${n} : ${d} = ${k} y no sobra nada.`)},
+  ()=>{const n=rnd(11,60);return vf(`${n} es divisor de ${n} porque todo número es divisor de sí mismo.`,true,`<b>Verdadero:</b> ${n} : ${n} = 1, exacta.`)},
+  ()=>vf("Un mismo número puede ser divisor de varios números.",true,"<b>Verdadero:</b> por ejemplo, 3 es divisor de 6, de 9, de 12…"),
+  ()=>{const n=pick([17,27,47,57,67,87,97,117,127]);return vf(`${n} es múltiplo de 7 porque acaba en 7.`,false,`<b>Falso:</b> que acabe en 7 no importa. ${n} : 7 = ${Math.floor(n/7)} y sobran ${n%7}.`)},
+  ()=>{const n=pick([13,23,43,53,73,83,103]);return vf(`${n} es múltiplo de 3 porque acaba en 3.`,false,`<b>Falso:</b> para el 3 se mira la suma de las cifras: ${String(n).split("").join(" + ")} = ${sumDig(n)}, que no es múltiplo de 3.`)},
+  ()=>{const n=pick([616,427,535,724,382,265]);return vf(`${n} es múltiplo de 13 porque la suma de sus cifras es 13.`,false,`<b>Falso:</b> ese truco no sirve para el 13. ${n} : 13 = ${Math.floor(n/13)} y sobran ${n%13}.`)},
+  ()=>{const [a,b]=pick([[12,32],[13,23],[14,34],[15,25],[16,36],[24,44],[18,28]]);return vf(`${a} es divisor de ${b} porque los dos acaban en ${a%10}.`,false,`<b>Falso:</b> ${b} : ${a} = ${Math.floor(b/a)} y sobran ${b%a}. Que acaben igual no significa nada.`)},
+  ()=>{const a=rnd(6,9),b=pick([50,52,58,70,74]);return b%a?vf(`${b} es múltiplo de ${a} porque ${a} es más pequeño que ${b}.`,false,`<b>Falso:</b> ser más pequeño no basta. ${b} : ${a} = ${Math.floor(b/a)} y sobran ${b%a}.`):vf(`${b} es múltiplo de ${a} porque ${a} × ${b/a} = ${b}.`,true,`<b>Verdadero:</b> ${a} × ${b/a} = ${b}.`)},
+];
+const qPorque=()=>pick(PORQUE)();
+const genConceptos=()=>mezcla(veces(2,qEsMultiplo),[qEsDivisor(),qRelacion()],sample(PORQUE,3).map(f=>f()),sample(DEF_CONCEPTOS,3).map(f=>f()));
 
 /* =====================================================================
    Múltiplos
@@ -154,7 +168,21 @@ function qUnMultiplo(){
   const n=rnd(3,12),m=n*rnd(3,12),otros=new Set();while(otros.size<3)otros.add(cerca(n,12,n*13));
   return op(`¿Cuál de estos números es múltiplo de ${N(n)}?`,[String(m),...[...otros].map(String)],`${m} = ${n} × ${m/n}, así que <b>${m}</b> es múltiplo de ${n}.`);
 }
-const genMultiplos=()=>mezcla(veces(6,qCazaMultiplos),veces(2,qSiguienteMultiplo),veces(2,qUnMultiplo));
+function qIntrusos(){
+  const n=pick([6,8,9,12,15]),mults=sample(range(2,14).map(k=>n*k),9),otros=new Set();
+  while(otros.size<3){const x=cerca(n,14,n*14);if(!mults.includes(x))otros.add(x)}
+  const items=shuffle([...mults,...otros]);
+  return {tipo:"multi",texto:`El número ${N(n)} ha invitado a su fiesta a algunos de sus múltiplos, pero se han colado 3 intrusos. ¡Encuéntralos!`,items,ok:[...otros],
+    sol:`Los intrusos eran <b>${[...otros].join(", ")}</b>: no salen en la tabla del ${n}. Los demás sí: ${mults.sort((a,b)=>a-b).map(x=>`${x} = ${n} × ${x/n}`).join(", ")}.`};
+}
+function qPrimerosMultiplos(){
+  const n=rnd(3,9),c=pick([5,6]),prim=range(1,c).map(k=>n*k),mas=sample(range(c+1,c+5).map(k=>n*k),3),otros=new Set();
+  while(otros.size<12-c-3){const x=cerca(n,c+3,n*(c+3));if(!prim.includes(x)&&!mas.includes(x))otros.add(x)}
+  const items=[...prim,...mas,...otros].sort((a,b)=>a-b);
+  return {tipo:"multi",texto:`Toca los ${c} <b>primeros</b> múltiplos de ${N(n)}`,items,ok:prim,
+    sol:`Los ${c} primeros múltiplos de ${n} son ${n} × 1, ${n} × 2, … ${n} × ${c}: <b>${prim.join(", ")}</b>. ${mas.sort((a,b)=>a-b).join(", ")} también son múltiplos, pero no de los primeros.`};
+}
+const genMultiplos=()=>mezcla(veces(4,qCazaMultiplos),veces(2,qIntrusos),veces(2,qPrimerosMultiplos),[qSiguienteMultiplo(),qUnMultiplo()]);
 
 /* =====================================================================
    Divisores
@@ -181,7 +209,22 @@ function qNoEsDivisor(){
   const n=pick(CON_DIVISORES.filter(x=>divs(x).length>=6)),d=sample(divs(n),3),no=pick(range(3,Math.min(n-1,20)).filter(x=>n%x));
   return op(`¿Cuál de estos números NO es divisor de ${N(n)}?`,[String(no),...d.map(String)],`${n} : ${no} no es exacta (sobran ${n%no}). Los divisores de ${n} son ${divs(n).join(", ")}.`);
 }
-const genDivisores=()=>mezcla(veces(6,qCazaDivisores),veces(2,qEsDivisorDe),[qCuantosDivisores(),qNoEsDivisor()]);
+// "El número 12 es divisor de…": la relación al revés (12 es divisor de 36 porque 36 es múltiplo de 12)
+function qDivisorDeTabla(){
+  const n=pick([4,6,8,9,12,15]),si=sample(range(1,15).map(k=>n*k),rnd(4,6)),no=new Set();
+  while(no.size<12-si.length){const x=pick([...range(n+1,n*15).filter(x=>x%n),...divs(n).filter(d=>d<n)]);if(!si.includes(x))no.add(x)}
+  const items=shuffle([...si,...no]);
+  return {tipo:"multi",texto:`El número ${N(n)} es divisor de… Toca los números de los que ${n} es divisor`,items,ok:si,
+    nota:`${n} es divisor de un número si ese número se puede dividir entre ${n} de forma exacta.`,
+    sol:`${n} es divisor de <b>${si.sort((a,b)=>a-b).join(", ")}</b> (${si.map(x=>`${x} : ${n} = ${x/n}`).join(", ")}). De los demás no: la división no es exacta${[...no].some(x=>x<n)?" (y un número más pequeño que "+n+" no puede tener a "+n+" como divisor)":""}.`};
+}
+function qNoSonDivisores(){
+  const n=pick([24,30,36,40,48,60,72]),d=sample(divs(n),7),no=sample(range(2,n-1).filter(x=>n%x),2);
+  const items=shuffle([...d,...no]);
+  return {tipo:"multi",texto:`Entre estos números hay dos que <b>no</b> son divisores de ${N(n)}. Encuéntralos`,items,ok:no,
+    sol:`No son divisores de ${n}: <b>${no.join(" y ")}</b> (${no.map(x=>`${n} : ${x} sobran ${n%x}`).join("; ")}). Los divisores de ${n} son ${divs(n).join(", ")}.`};
+}
+const genDivisores=()=>mezcla(veces(4,qCazaDivisores),veces(2,qDivisorDeTabla),[qNoSonDivisores(),qEsDivisorDe(),qEsDivisorDe(),pick([qCuantosDivisores,qNoEsDivisor])()]);
 
 /* =====================================================================
    Criterios de divisibilidad (2, 3, 5 y 9)
@@ -344,6 +387,9 @@ function dibujarSolido(){
     o=`<defs><radialGradient id="sg" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="hsl(205 60% 86%)"/><stop offset="1" stop-color="hsl(205 55% 42%)"/></radialGradient></defs>
       <circle r="1.18" fill="url(#sg)" stroke="#16324A" stroke-width=".03"/>
       <ellipse rx="1.18" ry="${(.35*Math.cos(st.ax)).toFixed(3)}" fill="none" stroke="#16324A" stroke-width=".02" stroke-dasharray=".06 .05" opacity=".5"/>`;
+    const h=st.resaltar;
+    if(h&&h.tipo==="radio")o+=`<line x1="0" y1="0" x2="${(1.18*Math.cos(st.ay)).toFixed(3)}" y2="${(.35*Math.cos(st.ax)*Math.sin(st.ay)).toFixed(3)}" stroke="${R}" stroke-width=".07" stroke-linecap="round"/><circle r=".06" fill="#16324A"/>`;
+    if(h&&h.tipo==="centro")o+=`<circle r=".1" fill="${R}" stroke="#fff" stroke-width=".03"/>`;
     st.svg.innerHTML=o;return;
   }
   const P=M.P.map(p=>rotar(p,st.ay,st.ax)),Nn=M.faces.map(f=>rotar(f.n,st.ay,st.ax));
@@ -356,6 +402,7 @@ function dibujarSolido(){
     const b=Math.max(0,vdot(Nn[fi],LUZ)),fill=`hsl(205 58% ${(46+34*b).toFixed(1)}%)`;
     o+=`<polygon points="${f.v.map(xy).join(" ")}" fill="${fill}" fill-opacity="${redondo?1:.92}" stroke="${fill}" stroke-width=".012"/>`});
   const h=st.resaltar;
+  if(h&&h.tipo==="lateral")M.faces.forEach((f,fi)=>{if(front(fi)&&Math.abs(M.faces[fi].n[1])<=.95)o+=`<polygon points="${f.v.map(xy).join(" ")}" fill="${R}" fill-opacity=".72" stroke="${R}" stroke-width=".012"/>`});
   if(h&&h.tipo==="cara"){const f=M.faces[h.i],vis=front(h.i);
     o+=`<polygon points="${f.v.map(xy).join(" ")}" fill="${vis?R:"none"}" fill-opacity=".78" stroke="${R}" stroke-width=".04"${vis?"":` stroke-dasharray=".08 .06"`}/>`}
   for(const e of M.edges)if(e.sharp&&e.f.some(front))o+=line(e,"#16324A",.03);
@@ -368,7 +415,7 @@ function mostrarSolido(spec){
   const host=$("qsolid");host.hidden=false;
   host.innerHTML=`<svg class="solid" viewBox="-1.55 -1.55 3.1 3.1" role="img" aria-label="Cuerpo geométrico"></svg><div class="rot-hint">Arrastra para girarlo</div>`;
   const svgEl=host.querySelector("svg");
-  SOL={forma:spec.forma,resaltar:spec.resaltar||null,ay:spec.ay??.5,ax:.42,auto:true,svg:svgEl,t:performance.now(),vel:spec.resaltar?.18:.4};
+  SOL={forma:spec.forma,resaltar:spec.resaltar||null,ay:spec.ay??.5,ax:spec.ax??.42,auto:true,svg:svgEl,t:performance.now(),vel:spec.resaltar?.18:.4};
   let dr=null;
   svgEl.addEventListener("pointerdown",e=>{dr={x:e.clientX,y:e.clientY,ay:SOL.ay,ax:SOL.ax};SOL.auto=false;svgEl.setPointerCapture(e.pointerId)});
   svgEl.addEventListener("pointermove",e=>{if(!dr||!SOL)return;SOL.ay=dr.ay+(e.clientX-dr.x)*.012;SOL.ax=Math.max(-1.3,Math.min(1.3,dr.ax+(e.clientY-dr.y)*.012));dibujarSolido()});
@@ -527,7 +574,98 @@ const PROB_OTROS=[
     return prob(`Vamos a pintar todas las caras de ${n} ${pl}. ¿Cuántas caras pintaremos en total?`,t,
       solProb(`Primero contamos las <b>caras</b> de cada uno y luego multiplicamos.`,`${s.nombre}: ${M.C} caras.`,`${M.C} × ${n} = <b>${t} caras</b>.`))},
 ];
-const genProblemas=()=>mezcla(sample(PROB_MCM,2).map(f=>f()),sample(PROB_MCD,2).map(f=>f()),[pick(PROB_OTROS)()]);
+// Problema de los estuches: se eligen varias respuestas (los tamaños que son divisores)
+function probEstuches(){
+  for(;;){
+    const n=pick([24,30,36,40,42,48,60,72]),tam=sample(range(3,10),4).sort((a,b)=>a-b),ok=tam.filter(x=>n%x===0);
+    if(!ok.length||ok.length===4)continue;
+    const [p1]=dosNombres();
+    return {tipo:"multi",largo:true,texto:`En la papelería de ${p1} hay ${n} rotuladores sueltos y estuches de ${tam.slice(0,-1).join(", ")} y ${tam.at(-1)} rotuladores. ¿En qué estuches puede guardarlos todos sin que sobre ni falte ninguno?`,
+      items:tam,etiquetas:tam.map(x=>`De ${x}`),ok,nota:"Puede haber varias respuestas: marca todas las que sirvan.",
+      sol:solProb(`Sirven los estuches cuyo tamaño es <b>divisor</b> de ${n}: la división tiene que ser exacta.`,tam.map(x=>`${n} : ${x} = ${Math.floor(n/x)}${n%x?` y sobran ${n%x}`:" exacta"}`).join("<br>"),`en los de <b>${ok.join(" y ")}</b>.`)};
+  }
+}
+const genProblemas=()=>mezcla(sample(PROB_MCM,2).map(f=>f()),sample(PROB_MCD,2).map(f=>f()),[Math.random()<.4?probEstuches():pick(PROB_OTROS)()]);
+
+/* =====================================================================
+   Números primos y compuestos, y criba de Eratóstenes
+   ===================================================================== */
+const esPrimo=n=>n>1&&divs(n).length===2;
+const factores=n=>{const d=divs(n).find(x=>x>1&&x<n);return `${d} × ${n/d}`};
+function qPrimoCompuesto(){
+  const primo=Math.random()<.5,n=primo?pick(range(11,97).filter(esPrimo)):pick(range(10,99).filter(x=>!esPrimo(x)&&x%2&&x%5));
+  return op(`¿El número ${N(n)} es primo o compuesto?`,primo?["Primo","Compuesto"]:["Compuesto","Primo"],
+    primo?`<b>Primo:</b> solo tiene dos divisores, el 1 y el ${n}.`:`<b>Compuesto:</b> ${n} = ${factores(n)}. Sus divisores son ${divs(n).join(", ")}: tiene más de dos.`,
+    {fijo:true,orden:["Primo","Compuesto"]});
+}
+function qTocaPrimos(){
+  const ini=pick([2,20,40,60]),zona=range(ini,ini+40),pr=sample(zona.filter(esPrimo),rnd(4,5)),co=sample(zona.filter(x=>!esPrimo(x)&&x>1),12-pr.length);
+  const items=[...pr,...co].sort((a,b)=>a-b);
+  return {tipo:"multi",texto:"Toca todos los números <b>primos</b>",items,ok:pr,
+    sol:`Son primos <b>${pr.sort((a,b)=>a-b).join(", ")}</b>: solo se pueden dividir entre 1 y entre sí mismos. Los demás son compuestos: ${co.slice(0,4).map(x=>`${x} = ${factores(x)}`).join(", ")}…`};
+}
+// Criba de Eratóstenes hasta 50: los múltiplos de los primos anteriores ya están tachados
+function qCriba(){
+  const k=pick([3,5,7]),antes=[2,3,5,7].filter(p=>p<k),hasta=50;
+  const tachados=[1,...range(2,hasta).filter(x=>antes.some(p=>x%p===0&&x!==p))];
+  const ok=range(2,hasta).filter(x=>x%k===0&&x!==k&&!tachados.includes(x));
+  return {tipo:"multi",criba:true,texto:`Criba de Eratóstenes: ya están tachados el 1 y los múltiplos de ${antes.join(", ")}. Ahora tacha los múltiplos de ${N(k)} que quedan (el ${k} no, porque es primo)`,
+    items:range(1,hasta),tachados,ok,
+    sol:`Los múltiplos de ${k} que quedaban sin tachar eran <b>${ok.join(", ")}</b>. Los demás múltiplos de ${k} (${range(2,Math.floor(hasta/k)).map(m=>m*k).filter(x=>!ok.includes(x)).join(", ")}) ya estaban tachados por ser múltiplos de ${antes.join(" o ")}.`};
+}
+const DEF_PRIMOS=[
+  ()=>op("Un número primo es el que…",["solo tiene dos divisores: el 1 y él mismo","es impar","termina en 1, 3, 7 o 9","tiene más de dos divisores"],"Un número <b>primo</b> solo se puede dividir de forma exacta entre 1 y entre sí mismo: 2, 3, 5, 7, 11, 13…",{one:true}),
+  ()=>op("Un número compuesto es el que…",["tiene más de dos divisores","solo tiene dos divisores","es par","termina en 0"],"Un número <b>compuesto</b> tiene más de dos divisores: 12 tiene 1, 2, 3, 4, 6 y 12.",{one:true}),
+  ()=>op("¿Cuál es el único número primo par?",["El 2","El 4","El 0","No hay ninguno"],"El <b>2</b>: solo tiene dos divisores (1 y 2). Todos los demás pares son divisibles entre 2, así que son compuestos."),
+  ()=>op("¿El número 1 es primo?",["No, solo tiene un divisor","Sí, es el primer primo","Sí, porque es impar","No, porque es compuesto"],"El <b>1</b> no es ni primo ni compuesto: solo tiene un divisor, él mismo.",{one:true}),
+  ()=>op("En la criba de Eratóstenes, los números que quedan sin tachar al final son…",["los números primos","los números compuestos","los múltiplos de 2","los números impares"],"Se tachan los múltiplos de 2, 3, 5, 7…; los que quedan son los <b>primos</b>.",{one:true}),
+];
+const genPrimos=()=>mezcla(veces(3,qPrimoCompuesto),veces(2,qTocaPrimos),veces(2,qCriba),sample(DEF_PRIMOS,3).map(f=>f()));
+
+/* =====================================================================
+   Cuerpos redondos (cilindro, cono y esfera)
+   ===================================================================== */
+const REDONDOS=["cilindro","cono","esfera"];
+const DEF_PARTE_R={
+  "Base":"Las <b>bases</b> son las caras planas en forma de círculo: el cilindro tiene dos y el cono, una.",
+  "Superficie lateral":"La <b>superficie lateral</b> es la parte curva que rodea al cuerpo.",
+  "Vértice":"El <b>vértice</b> (o cúspide) del cono es el punto donde termina la superficie lateral.",
+  "Centro":"El <b>centro</b> de la esfera es el punto que está a la misma distancia de toda su superficie.",
+  "Radio":"El <b>radio</b> es el segmento que va del centro a cualquier punto de la superficie de la esfera.",
+};
+function qQueCuerpo(){
+  const forma=pick(REDONDOS),s=SOLIDOS[forma];
+  return op("¿Qué cuerpo redondo es?",[s.nombre,...REDONDOS.filter(f=>f!==forma).map(f=>SOLIDOS[f].nombre),"Pirámide"],
+    {cilindro:"Es un <b>cilindro</b>: dos bases circulares y una superficie lateral curva (como una lata).",cono:"Es un <b>cono</b>: una base circular, una superficie lateral curva y un vértice (como un cucurucho).",esfera:"Es una <b>esfera</b>: toda su superficie es curva (como un balón)."}[forma],{solido:{forma}});
+}
+function qParteRedondo(){
+  const forma=pick(REDONDOS);let resaltar,resp,ops,ax;
+  if(forma==="esfera"){resp=pick(["Centro","Radio"]);resaltar={tipo:resp.toLowerCase()};ops=["Centro","Radio","Base"]}
+  else{
+    const M=modelo(forma),bases=M.faces.map((f,i)=>i).filter(i=>Math.abs(M.faces[i].n[1])>.95);
+    const que=pick(forma==="cono"?["base","lateral","vertice"]:["base","lateral"]);
+    if(que==="base"){const i=forma==="cono"?bases[0]:bases.find(i=>M.faces[i].n[1]>0);resaltar={tipo:"cara",i};resp="Base";if(forma==="cono")ax=-.38}
+    else if(que==="lateral"){resaltar={tipo:"lateral"};resp="Superficie lateral"}
+    else{resaltar={tipo:"vertice",i:M.P.length-1};resp="Vértice"}
+    ops=forma==="cono"?["Base","Superficie lateral","Vértice"]:["Base","Superficie lateral"];
+  }
+  return op(`¿Qué parte ${forma==="esfera"?"de la esfera":"del "+forma} está señalada en rojo?`,[resp,...ops.filter(x=>x!==resp)],DEF_PARTE_R[resp],{solido:{forma,resaltar,ax},fijo:true,orden:ops});
+}
+function qPoliedroORedondo(){
+  const forma=Math.random()<.5?pick(REDONDOS):pick(POLIEDROS),s=SOLIDOS[forma],red=s.grupo==="redondo";
+  return op("¿Es un poliedro o un cuerpo redondo?",red?["Cuerpo redondo","Poliedro"]:["Poliedro","Cuerpo redondo"],
+    red?`Es un <b>cuerpo redondo</b> (${s.nombre.toLowerCase()}): tiene alguna superficie curva.`:`Es un <b>poliedro</b> (${s.nombre.toLowerCase()}): todas sus caras son polígonos planos.`,{solido:{forma},fijo:true,orden:["Poliedro","Cuerpo redondo"]});
+}
+const DEF_REDONDOS=[
+  ()=>op("¿Qué es un cuerpo redondo?",["Un cuerpo geométrico con alguna superficie curva","Un cuerpo con todas sus caras planas","Un círculo","Un polígono de muchos lados"],"Los <b>cuerpos redondos</b> tienen alguna superficie curva: cilindro, cono y esfera.",{one:true}),
+  ()=>op("¿Cuántas bases tiene un cilindro?",["2","1","Ninguna","3"],"El cilindro tiene <b>dos bases</b> circulares, iguales y paralelas."),
+  ()=>op("¿Cuántas bases tiene un cono?",["1","2","Ninguna","3"],"El cono tiene <b>una base</b> circular y un vértice."),
+  ()=>op("¿Qué forma tienen las bases del cilindro y del cono?",["Círculos","Cuadrados","Triángulos","Óvalos"],"Sus bases son <b>círculos</b>."),
+  ()=>op("¿Qué cuerpo redondo no tiene bases ni vértice?",["La esfera","El cono","El cilindro","Ninguno"],"La <b>esfera</b>: toda su superficie es curva."),
+  ()=>{const [o,r]=pick([["una lata de refresco","cilindro"],["un cucurucho de helado","cono"],["un balón","esfera"],["un rollo de papel","cilindro"],["un gorro de cumpleaños","cono"],["una canica","esfera"]]);
+    return op(`¿Qué cuerpo redondo se parece a ${o}?`,[SOLIDOS[r].nombre,...REDONDOS.filter(f=>f!==r).map(f=>SOLIDOS[f].nombre)],`${o.charAt(0).toUpperCase()+o.slice(1)} tiene forma de <b>${r}</b>.`)},
+];
+const genRedondos=()=>mezcla(veces(2,qQueCuerpo),veces(3,qParteRedondo),veces(2,qPoliedroORedondo),sample(DEF_REDONDOS,3).map(f=>f()));
 
 /* =====================================================================
    Secciones del plan
@@ -541,6 +679,8 @@ const SECS_MATES={ // estrellas: [segundos para 3 estrellas, segundos para 2]
   mcm:{nombre:"m.c.m.",estrellas:[120,200],gen:genMcm},
   poliedros_partes:{nombre:"Poliedros: partes",estrellas:[60,100],gen:genPartes},
   poliedros_tipos:{nombre:"Poliedros: tipos",estrellas:[60,100],gen:genTipos},
+  primos:{nombre:"Primos",estrellas:[60,100],gen:genPrimos},
+  redondos:{nombre:"Cuerpos redondos",estrellas:[60,100],gen:genRedondos},
   // 5 problemas por partida; en el examen salen 2; cada problema resuelto a la primera suma en su ranking
   problemas:{nombre:"🧩 Problemas",estrellas:[300,480],gen:genProblemas,enExamen:2,contador:true},
 };
@@ -567,6 +707,11 @@ const TEORIA_MATES={
   poliedros_partes:`<h3>¿Qué es un poliedro?</h3><p>Un cuerpo geométrico limitado por polígonos. Si tiene alguna superficie curva (cilindro, cono, esfera) es un <b>cuerpo redondo</b>.</p>
     <h3>Partes</h3><p><b>Caras:</b> los polígonos que lo limitan.<br><b>Aristas:</b> los segmentos donde se unen dos caras.<br><b>Vértices:</b> los puntos donde se unen varias aristas.<br><b>Bases</b> (prismas y pirámides): las caras sobre las que se apoyan; el resto son <b>caras laterales</b>.</p>
     <h3>Para contar</h3><p>Prisma con base de n lados: n + 2 caras, 3 × n aristas, 2 × n vértices.<br>Pirámide con base de n lados: n + 1 caras, 2 × n aristas, n + 1 vértices.</p>`,
+  primos:`<h3>Números primos</h3><p>Un número es <b>primo</b> si solo tiene dos divisores: el 1 y él mismo. Los primos menores que 50 son 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43 y 47.</p>
+    <h3>Números compuestos</h3><p>Tienen más de dos divisores: 15 = 3 × 5 (divisores 1, 3, 5 y 15). El 1 no es ni primo ni compuesto.</p>
+    <h3>Criba de Eratóstenes</h3><p>1. Escribe los números del 1 al 50 y tacha el 1.<br>2. Deja el 2 y tacha todos sus múltiplos (4, 6, 8…).<br>3. Deja el 3 y tacha sus múltiplos.<br>4. Haz lo mismo con el 5 y el 7.<br>5. Los que quedan sin tachar son los <b>primos</b>.</p>`,
+  redondos:`<h3>Cuerpos redondos</h3><p>Tienen alguna superficie curva.</p>
+    <p><b>Cilindro:</b> dos bases circulares iguales y paralelas, y una superficie lateral curva (como una lata).<br><b>Cono:</b> una base circular, una superficie lateral curva y un vértice (como un cucurucho).<br><b>Esfera:</b> toda su superficie es curva; tiene centro y radio (como un balón).</p>`,
   problemas:`<h3>Cómo resolver un problema</h3><p>1. Lee el problema dos veces y subraya los datos.<br>2. Piensa qué te preguntan.<br>3. Decide la operación.<br>4. Calcula y comprueba que la respuesta tiene sentido.</p>
     <h3>¿m.c.m. o m.c.d.?</h3><p><b>m.c.m.</b> cuando algo se repite y buscas cuándo vuelve a <b>coincidir</b> (autobuses, faros, ir a la piscina) o el número más pequeño que se puede repartir en grupos de varios tamaños.</p>
     <p><b>m.c.d.</b> cuando hay que <b>dividir o repartir</b> en partes iguales lo más grandes posible, sin que sobre nada (cortar cuerdas, hacer ramos, poner baldosas).</p>
@@ -586,6 +731,7 @@ Quiz.init({secs:SECS_MATES,teoria:TEORIA_MATES,mostrar:q=>{if(q.solido)mostrarSo
   onFinish:(r,res)=>{
     if(!r.fallos){progress.sinFallos[r.sec]=true;saveProgress()}
     if(r.sec==="divisibilidad"&&!r.fallos)unlock("detective");
+    if(r.sec==="primos"&&!r.fallos)unlock("eratostenes");
     if(progress.sinFallos.mcd&&progress.sinFallos.mcm)unlock("calculadora");
     if(["poliedros_partes","poliedros_tipos"].every(s=>progress.best[s]&&progress.best[s].stars===3))unlock("geometra");
   },

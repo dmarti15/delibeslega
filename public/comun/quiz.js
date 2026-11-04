@@ -64,13 +64,15 @@ function render(q){
     const okSet=new Set(q.ok.map(String));
     const celdas=q.palabras
       ?`<div class="words">${q.items.map((x,i)=>`<button class="num word" data-v="${i}" aria-pressed="false">${x}</button>`).join("")}</div>`
-      :`<div class="nums">${q.items.map(x=>`<button class="num" data-v="${x}" aria-pressed="false">${x}</button>`).join("")}</div>`;
+      :`<div class="nums${q.criba?" criba":""}">${q.items.map((x,i)=>{
+          const tach=q.tachados&&q.tachados.includes(x),txt=q.etiquetas?q.etiquetas[i]:x;
+          return `<button class="num${tach?" tachado":""}" data-v="${x}" aria-pressed="false"${tach?" disabled":""}>${txt}</button>`}).join("")}</div>`;
     box.insertAdjacentHTML("beforeend",celdas+`<button class="btn main go" id="goBtn">${run.examen?"Responder":"Comprobar"}</button>`);
-    box.querySelectorAll(".num").forEach(b=>b.onclick=()=>{if(busy)return;const on=!b.classList.contains("sel");b.classList.toggle("sel",on);b.setAttribute("aria-pressed",on)});
+    box.querySelectorAll(".num:not(.tachado)").forEach(b=>b.onclick=()=>{if(busy)return;const on=!b.classList.contains("sel");b.classList.toggle("sel",on);b.setAttribute("aria-pressed",on)});
     answer=()=>{
       if(busy)return;const sel=[...box.querySelectorAll(".num.sel")].map(b=>b.dataset.v);
       const ok=sel.length===okSet.size&&sel.every(v=>okSet.has(v));
-      if(!run.examen)box.querySelectorAll(".num").forEach(b=>{const s=b.classList.contains("sel"),c=okSet.has(b.dataset.v);b.classList.remove("sel");
+      if(!run.examen)box.querySelectorAll(".num:not(.tachado)").forEach(b=>{const s=b.classList.contains("sel"),c=okSet.has(b.dataset.v);b.classList.remove("sel");
         if(s&&c)b.classList.add("ok");else if(s&&!c)b.classList.add("bad");else if(!s&&c)b.classList.add("miss")});
       resolve(ok);
     };
@@ -155,7 +157,7 @@ setInterval(()=>{if(run&&!run.done&&run.t0!=null)$("time").textContent=fmtClock(
    ===================================================================== */
 function renderModes(){
   $("modes").innerHTML=`<button class="chip exam" data-sec="examen" aria-pressed="${sec==="examen"}">📝 Examen</button>`+
-    Object.keys(SECS).map(s=>`<button class="chip" data-sec="${s}" aria-pressed="${s===sec}">${SECS[s].nombre}</button>`).join("");
+    Object.keys(SECS).map(s=>`<button class="chip" data-sec="${s}" aria-pressed="${s===sec}">${SECS[s].corto||SECS[s].nombre}</button>`).join("");
 }
 const Quiz={
   init(o){

@@ -13,6 +13,7 @@ const LOGROS = {
     { id: "detective", icon: "🔍", name: "Detective", desc: "Termina Divisibilidad sin ningún fallo." },
     { id: "calculadora", icon: "🧮", name: "Calculadora humana", desc: "Termina m.c.d. y m.c.m. sin fallos." },
     { id: "geometra", icon: "🧊", name: "Geómetra", desc: "Consigue 3 estrellas en las dos secciones de poliedros." },
+    { id: "eratostenes", icon: "🏺", name: "Eratóstenes", desc: "Termina Primos sin ningún fallo." },
     { id: "resolutor", icon: "🧩", name: "Resolutor", desc: "Resuelve 10 problemas a la primera." },
     { id: "genio", icon: "🦉", name: "Genio de los problemas", desc: "Resuelve 50 problemas a la primera." },
     ...LOGROS_EXAMEN],
@@ -22,4 +23,8 @@ const LOGROS = {
     { id: "diccionario", icon: "📚", name: "Diccionario andante", desc: "Consigue 3 estrellas en Polisémicas y en Homófonas." },
     ...LOGROS_EXAMEN],
 };
-const PLAN_NOMBRE = { europa: "Europa", mates: "Matemáticas", lengua: "Lengua" };
+LOGROS.tablas = [...logrosBase({ pistas: false, tiempo: false, primero: "Primera tabla", pleno: "Maestro de las tablas" }),
+  { id: "domador", icon: "🦁", name: "Domador del 7, 8 y 9", desc: "Consigue 3 estrellas en las tablas del 7, del 8 y del 9." },
+  { id: "todas", icon: "🎲", name: "Todo mezclado", desc: "Termina Todas mezcladas sin ningún fallo." },
+  ...LOGROS_EXAMEN];
+const PLAN_NOMBRE = { europa: "Europa", mates: "Matemáticas", lengua: "Lengua", tablas: "Tablas" };
