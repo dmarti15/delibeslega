@@ -109,7 +109,7 @@ function resolve(ok){
     done++;updHead();const c=$("qcard");c.classList.remove("flash");void c.offsetWidth;c.classList.add("flash");
     setTimeout(next,600);
   }else{
-    tone("bad");run.fallos++;run.streak=0;racha=0;
+    tone("bad");run.fallos++;run.streak=0;racha=0;streakReset();
     if(!failed.includes(cur.base))failed.push(cur.base);
     if(!requeued.has(cur.base)){requeued.add(cur.base);queue.splice(Math.min(queue.length,2+Math.floor(Math.random()*3)),0,{...cur.base,again:true});total++}
     updHead();pause();

@@ -31,7 +31,10 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
 .plan.soon{opacity:.6;box-shadow:0 6px 0 var(--chip)}
 .plan.soon .ir{background:var(--chip);color:var(--muted)}
 @media (max-width:560px){header{flex-wrap:nowrap}h1{font-size:1.3rem}.who{max-width:42vw}}
+.general{margin-top:34px}
+.general .rank{background:var(--panel);border-radius:16px;padding:6px}
 .feed{margin-top:34px}
+.feedlist li.hito{background:color-mix(in srgb,var(--target) 16%,var(--panel));border-color:var(--target)}
 .feed .h2{display:flex;align-items:center;gap:10px}
 .feedlist{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
 .feedlist li{display:flex;align-items:center;gap:12px;background:var(--panel);border:2px solid var(--chip);border-radius:16px;padding:10px 14px}
@@ -86,6 +89,12 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
       <div class="pie"><span class="st"></span><span class="ir">Pronto</span></div>
     </div>
   </div>
+  <section class="general">
+    <h2 class="h2">🏆 Ranking general</h2>
+    <p class="intro" style="margin:0 0 10px">Todas las asignaturas juntas.</p>
+    <div class="bar" style="padding:0 0 12px" id="gnSecs"></div>
+    <div id="gnBody"><p class="note">Cargando…</p></div>
+  </section>
   <section class="feed" aria-live="polite">
     <h2 class="h2">🏅 Últimos logros</h2>
     <ol class="feedlist" id="feed"><li class="vacio">Cargando…</li></ol>
@@ -94,7 +103,7 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
 <script src="comun/comun.js"></script>
 <script src="comun/logros.js"></script>
 <script>
-Plan.init({onJugador:()=>Promise.all(["europa","mates","lengua","tablas"].map(syncJuego)).then(pintarEstrellas)});
+Plan.init({onJugador:()=>{Promise.all(["europa","mates","lengua","tablas"].map(syncJuego)).then(pintarEstrellas);cargarGeneral();cargarFeed()}});
 // Resumen de cada plan: logros conseguidos y, según el plan, estrellas (Europa) o mejor examen (Mates, Lengua)
 function pintarEstrellas(){
   document.querySelectorAll(".st[data-juego]").forEach(s=>{
@@ -129,18 +138,37 @@ async function cargarFeed(){
   const ol=$("feed");
   try{
     const j=await apiGet("feed=1");
-    const items=j.logros.map(e=>{const a=(LOGROS[e.juego]||[]).find(x=>x.id===e.logro);return a?{...e,a}:null}).filter(Boolean);
+    // Además de los logros, sale cada racha de más de 25 aciertos cuando se rompe
+    const items=j.logros.map(e=>{
+      if(e.hito==="racha")return{...e,logro:"racha"+e.n,a:{icon:"🔥"},texto:`ha logrado una racha de <b>${e.n} aciertos</b> en ${PLAN_NOMBRE[e.juego]||""}`};
+      if(e.hito)return null;
+      const a=(LOGROS[e.juego]||[]).find(x=>x.id===e.logro);return a?{...e,a,texto:`ha conseguido <b>${esc(a.name)}</b>`}:null}).filter(Boolean);
     if(!items.length){ol.innerHTML=`<li class="vacio">Todavía nadie ha conseguido logros. ¡Sé el primero!</li>`;vistos=new Set();return}
     const clave=e=>e.alias+e.juego+e.logro+e.fecha;
-    ol.innerHTML=items.map(e=>`<li class="${vistos&&!vistos.has(clave(e))?"nuevo ":""}${e.alias===profile.alias?"yo":""}">
+    ol.innerHTML=items.map(e=>`<li class="${vistos&&!vistos.has(clave(e))?"nuevo ":""}${e.alias===profile.alias?"yo ":""}${e.hito?"hito":""}">
       <span class="fic">${e.a.icon}</span>
-      <span class="ftx"><b>${esc(e.alias)}</b> ha conseguido <b>${esc(e.a.name)}</b><small>${PLAN_NOMBRE[e.juego]} · ${hace(e.fecha)}</small></span></li>`).join("");
+      <span class="ftx"><b>${esc(e.alias)}</b> ${e.texto}<small>${e.hito?"Racha":PLAN_NOMBRE[e.juego]} · ${hace(e.fecha)}</small></span></li>`).join("");
     vistos=new Set(items.map(clave));
   }catch(e){ol.innerHTML=`<li class="vacio">No se pueden cargar los logros ahora.</li>`}
 }
+/* ---------- Ranking general: racha, estrellas y logros de todas las asignaturas ---------- */
+const GN={racha:{nombre:"🔥 Racha",val:e=>plural(e.valor,"acierto seguido","aciertos seguidos")},
+  estrellas:{nombre:"⭐ Estrellas",val:e=>`${fmtEst(e.valor)} ★`},
+  logros:{nombre:"🏅 Logros",val:e=>plural(e.valor,"logro","logros")}};
+let gnSec="estrellas";
+function pintarGnSecs(){$("gnSecs").innerHTML=Object.keys(GN).map(k=>`<button class="chip" data-gn="${k}" aria-pressed="${k===gnSec}">${GN[k].nombre}</button>`).join("")}
+$("gnSecs").onclick=e=>{const b=e.target.closest("[data-gn]");if(!b)return;gnSec=b.dataset.gn;pintarGnSecs();cargarGeneral()};
+async function cargarGeneral(){
+  const body=$("gnBody");
+  try{
+    const j=await apiGet(`general=${gnSec}&id=${encodeURIComponent(profile.id)}`),yo=j.yo?j.yo.posicion:0;
+    body.innerHTML=rankList(j.top,yo,GN[gnSec].val)+(j.yo&&yo>j.top.length?`<p class="note">Tú vas ${yo}º de ${j.total} con ${GN[gnSec].val(j.yo)}.</p>`:"");
+  }catch(e){body.innerHTML=`<p class="note">No se puede cargar el ranking ahora.</p>`}
+}
+// Se cargan al abrir o recargar la página (y al entrar con un nombre)
+pintarGnSecs();cargarGeneral();
 cargarFeed();
-setInterval(()=>{if(!document.hidden)cargarFeed()},30000);
-document.addEventListener("visibilitychange",()=>{if(!document.hidden)cargarFeed()});
+
 </script>
 </body>
 </html>

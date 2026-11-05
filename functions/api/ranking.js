@@ -15,6 +15,8 @@
 // GET    /api/ranking?codigo=Nombre   cabecera x-admin-key        -> el profe consulta el código de un nombre
 // POST   /api/ranking {accion:"logro", id, juego, logro}          -> anuncia un logro conseguido
 // GET    /api/ranking?feed=1                                      -> últimos logros de todos (portada)
+// GET    /api/ranking?general=racha|estrellas|logros[&id=X]        -> ranking general de todas las asignaturas
+// POST   /api/ranking {accion:"racha", id, racha[, rota, juego]}  -> mejor racha; con rota:true y más de 25, aviso en la portada
 // POST   /api/ranking {accion:"partida", juego, seccion, modo, id, alias, tiempo, fallos, pistas}
 //          modo "temario" entra en el ranking de tiempos; "todo" y "practica" solo suman minutos y partidas
 // POST   /api/ranking {accion:"examen", juego, id, alias, aciertos, tiempo}   (10 preguntas, media estrella cada una)
@@ -23,7 +25,7 @@
 // Claves (tabla kv de D1):  u/<id>   r/<juego>/<seccion>/<id>   s/<juego>/<id>   e/<juego>/<id>
 //                   feed (últimos logros)   ld/<juego>/<logro>/<id> (para no repetir un logro)
 //                   p/<juego>/<id> (estrellas y logros, para no perderlos si se borra el navegador)
-//                   pr/<juego>/<id> (problemas resueltos)
+//                   pr/<juego>/<id> (problemas resueltos)   g/<id> (mejor racha)
 
 // ---------------------------------------------------------------------------------------
 // Almacén sobre Cloudflare D1. Imita la API de Netlify Blobs que usaba la versión anterior
@@ -157,6 +159,34 @@ const TABLAS = {
   minutos: (a, b) => b.segundos - a.segundos || b.partidas - a.partidas,
   partidas: (a, b) => b.partidas - a.partidas || b.segundos - a.segundos,
 };
+
+// ---------------------------------------------------------------------------------------
+// Ranking general (todas las asignaturas): racha, estrellas y logros
+// ---------------------------------------------------------------------------------------
+const RACHA_AVISO = 25; // al romperse una racha de más de 25 aciertos sale un aviso en la portada
+const estrellasDe = (prog) => Object.values((prog && prog.best) || {}).reduce((t, b) => t + (b.stars || 0), 0);
+const GENERAL = ["racha", "estrellas", "logros"];
+async function rankingGeneral(store, tipo, id) {
+  const valor = {};
+  if (tipo === "racha") for (const g of await leerTodo(store, "g/")) valor[g._id] = g.racha;
+  if (tipo === "logros") {
+    const { blobs } = await store.list({ prefix: "ld/" });
+    for (const b of blobs) { const u = b.key.split("/").pop(); valor[u] = (valor[u] || 0) + 1; }
+  }
+  if (tipo === "estrellas") {
+    for (const p of await leerTodo(store, "p/")) { const u = p._id.split("/").pop(); valor[u] = (valor[u] || 0) + estrellasDe(p); }
+    for (const e of await leerTodo(store, "e/")) { const u = e._id.split("/").pop(); valor[u] = (valor[u] || 0) + (e.estrellas || 0); }
+  }
+  const nom = await nombres(store);
+  const lista = Object.entries(valor).filter(([u, v]) => nom[u] && v > 0)
+    .map(([u, v]) => ({ u, alias: nom[u], valor: v }))
+    .sort((a, b) => b.valor - a.valor || a.alias.localeCompare(b.alias, "es"));
+  const out = { top: lista.slice(0, TOP).map(({ alias, valor }) => ({ alias, valor })), total: lista.length };
+  const i = id ? lista.findIndex((e) => e.u === id) : -1;
+  if (i >= 0) out.yo = { posicion: i + 1, alias: lista[i].alias, valor: lista[i].valor };
+  return out;
+}
+
 const POR_PROBLEMAS = (a, b) => b.resueltos - a.resueltos || String(a.fecha).localeCompare(String(b.fecha));
 const vistaProblemas = (e) => ({ alias: e.alias, resueltos: e.resueltos });
 // Examen: más aciertos primero; a igualdad, quien lo consiguió antes (el tiempo no cuenta)
@@ -218,10 +248,16 @@ export async function onRequest(context) {
     return json({ datos: datos || null, extra });
   }
 
+  if (req.method === "GET" && url.searchParams.has("general")) {
+    const tipo = url.searchParams.get("general");
+    if (!GENERAL.includes(tipo)) return json({ error: "Ranking no válido" }, 400);
+    return json(await rankingGeneral(store, tipo, url.searchParams.get("id") || ""));
+  }
+
   if (req.method === "GET" && url.searchParams.has("feed")) {
     const [feed, nom] = await Promise.all([store.get("feed", { type: "json" }), nombres(store)]);
     const lista = (feed || []).filter((e) => nom[e.u]).slice(0, 30)
-      .map((e) => ({ alias: nom[e.u], juego: e.j, logro: e.l, fecha: e.f }));
+      .map((e) => e.k ? { alias: nom[e.u], hito: e.k, n: e.n, juego: e.j, fecha: e.f } : { alias: nom[e.u], juego: e.j, logro: e.l, fecha: e.f });
     return json({ logros: lista });
   }
 
@@ -318,6 +354,26 @@ export async function onRequest(context) {
       if (!(await store.get(`u/${id}`))) return json({ error: "Pon tu nombre primero" }, 409);
       await store.setJSON(`p/${juego}/${id}`, b.datos);
       return json({ ok: true });
+    }
+
+    if (b.accion === "racha") {
+      const r = Number(b.racha);
+      if (!Number.isInteger(r) || r < 1 || r > 100000) return json({ error: "Racha no válida" }, 400);
+      if (!(await store.get(`u/${id}`))) return json({ error: "Pon tu nombre primero" }, 409);
+      const prev = (await store.get(`g/${id}`, { type: "json" })) || { racha: 0, ultimoAviso: 0 };
+      const g = { ...prev };
+      if (r > prev.racha) { g.racha = r; g.fecha = new Date().toISOString(); }
+      // Racha rota de más de 25: aviso en la portada (puede salir muchas veces).
+      // Se ignoran avisos del mismo jugador con menos de 20 s de diferencia por si llegan duplicados.
+      const juego = String(b.juego || ""), ahora = Date.now();
+      if (b.rota && r > RACHA_AVISO && juego in JUEGOS && ahora - (prev.ultimoAviso || 0) > 20000) {
+        g.ultimoAviso = ahora;
+        const feed = (await store.get("feed", { type: "json" })) || [];
+        feed.unshift({ u: id, k: "racha", n: r, j: juego, f: new Date(ahora).toISOString() });
+        await store.setJSON("feed", feed.slice(0, FEED_MAX));
+      }
+      if (JSON.stringify(g) !== JSON.stringify(prev)) await store.setJSON(`g/${id}`, g);
+      return json({ ok: true, racha: g.racha });
     }
 
     if (b.accion === "logro") {

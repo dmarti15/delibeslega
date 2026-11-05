@@ -275,6 +275,7 @@ function start(list){
   resetBoard();applyScope();$("end").classList.remove("on");$("skip").style.display="";
   if(pendingRank&&pendingRank.p==="end")pendingRank=null;
   queue=shuffle((list||items[mode].map(i=>mode+":"+i.id)).filter(inScope));total=queue.length;done=0;missed=new Set();requeued=new Set();
+  streakReset(); // empezar otra partida termina la racha anterior
   run={sec:SEC_OF[mode],t0:null,fallos:0,pistas:0,streak:0,retry:!!list,todo:scope==="todo",done:false};
   $("time").textContent="0:00";
   Object.values(LAYER).forEach(g=>{$(g).classList.remove("live");$(g).classList.toggle("dimmed",g!=="gC"&&g!==LAYER[mode])});
@@ -306,7 +307,7 @@ function finish(){
 let toastT;function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),1800)}
 function hint(){
   if(!cur||locked||!run)return;
-  missed.add(cur);hintedCur=true;run.streak=0;setCls(cur,"hint",true);updScore();
+  missed.add(cur);hintedCur=true;run.streak=0;streakReset();setCls(cur,"hint",true);updScore();
   toast("Está marcado en amarillo. Tócalo para seguir.");
 }
 function onPick(key){
@@ -329,7 +330,7 @@ function onPick(key){
     if(tries===0&&!hintedCur){run.streak++;streakHit(run.streak)}
     updScore();setTimeout(next,450);
   }else{
-    tries++;run.fallos++;run.streak=0;updScore();tone("bad");
+    tries++;run.fallos++;run.streak=0;streakReset();updScore();tone("bad");
     setCls(key,"bad",true);setTimeout(()=>setCls(key,"bad",false),700);
     toast("Eso es "+(n.kind==="rivers"?"el río ":"")+n.item.name);
     if(tries>=3&&!missed.has(cur))hint();
@@ -429,7 +430,7 @@ $("skip").onclick=hint;
 $("again").onclick=()=>start();
 $("retry").onclick=()=>start([...missed]);
 function enterStudy(){
-  resetBoard();cur=null;run=null;applyScope();
+  streakReset();resetBoard();cur=null;run=null;applyScope();
   Object.values(LAYER).forEach(g=>{$(g).classList.add("live");$(g).classList.remove("dimmed")});$("gMicro").classList.add("live");$("gMicro").classList.remove("dimmed");
   $("end").classList.remove("on");$("pq").textContent="Modo estudio";$("pt").textContent="Toca cualquier cosa";
   $("time").textContent="";$("prog").textContent="";$("streak").textContent="";$("skip").style.display="none";
@@ -454,6 +455,7 @@ let capPool=[],capRound=[],capSel=null,capDone=0,capTotal=0,capMissed=new Set(),
 function capStart(list){
   if(pendingRank&&pendingRank.p==="cap")pendingRank=null;
   capPool=shuffle(list||ALL.filter(id=>scope==="todo"||!TEMARIO_OUT.has(id)));capTotal=capPool.length;capDone=0;capMissed=new Set();
+  streakReset("cap");
   capRun={sec:"capitales",t0:null,fallos:0,pistas:0,streak:0,retry:!!list,todo:scope==="todo",done:false};
   $("capTime").textContent="0:00";$("capStreak").textContent="";
   $("capEnd").classList.remove("on");$("capEnd").style.display="none";document.querySelector(".cols").style.display="";
@@ -478,10 +480,10 @@ document.querySelector(".cols").addEventListener("click",e=>{
   if(a.dataset.id===t.dataset.id){
     [a,t].forEach(x=>x.classList.add("ok"));tone("ok");
     const country=a.dataset.side==="a"?a:t;country.insertAdjacentHTML("beforeend",`<span class="cap-name">${esc(CAPITALS[a.dataset.id])}</span>`);
-    capDone++;capRun.streak++;streakHit(capRun.streak);capUpd();
+    capDone++;capRun.streak++;streakHit(capRun.streak,"cap");capUpd();
     if([...document.querySelectorAll("#colA .tile")].every(x=>x.classList.contains("ok")))setTimeout(capDeal,700);
   }else{
-    capMissed.add(a.dataset.id);capMissed.add(t.dataset.id);capRun.fallos++;capRun.streak=0;capUpd();tone("bad");
+    capMissed.add(a.dataset.id);capMissed.add(t.dataset.id);capRun.fallos++;capRun.streak=0;streakReset("cap");capUpd();tone("bad");
     [a,t].forEach(x=>{x.classList.remove("bad");void x.offsetWidth;x.classList.add("bad")});
   }
 });

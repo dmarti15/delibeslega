@@ -159,7 +159,7 @@ function logrosBase({ pistas = true, primero = "Primer paso", pleno = "Pleno", t
     { id: "punteria", icon: "🎯", name: "Puntería", desc: "Termina una sección del temario sin ningún fallo." },
     { id: "racha10", icon: "🔥", name: "Racha de 10", desc: tiempo ? "Acierta 10 seguidos." : "Acierta 10 seguidos (la racha sigue de una partida a otra si no fallas)." },
     { id: "racha25", icon: "☄️", name: "Imparable", desc: tiempo ? "Acierta 25 seguidos." : "Acierta 25 seguidos (la racha sigue de una partida a otra si no fallas)." },
-    tiempo ? { id: "velocista", icon: "⚡", name: "Velocista", desc: "Consigue 3 estrellas en una sección." }
+    tiempo ? { id: "velocista", icon: "⚡", name: "Velocista", desc: "Consigue 3 estrellas en una sección.", rep: true }
            : { id: "velocista", icon: "⭐", name: "Tres estrellas", desc: "Consigue 3 estrellas en una sección." },
     { id: "pleno", icon: "🏆", name: pleno, desc: "Consigue 3 estrellas en todas las secciones." },
     { id: "repaso", icon: "📚", name: "Lección aprendida", desc: "Completa un repaso de fallos." },
@@ -189,7 +189,38 @@ async function enviarLogros() {
     }
   } finally { enviandoLogros = false; }
 }
-function streakHit(n) { if (n === 10) unlock("racha10"); if (n === 25) unlock("racha25"); }
+// Racha: logros de 10 y 25, la mejor racha de todas las asignaturas (ranking general)
+// y aviso en la portada cuando se rompe una racha de más de 25 aciertos.
+// "fuente" separa rachas que corren a la vez en la misma página (en Europa, el mapa y las capitales).
+const RACHA_AVISO = 25;
+let rachaT = null;
+const rachaViva = {};
+function streakHit(n, fuente = "main") {
+  rachaViva[fuente] = n;
+  if (n === 10) unlock("racha10");
+  if (n === 25) unlock("racha25");
+  if (n > LS.get("rachaMax", 0)) {
+    LS.set("rachaMax", n);
+    clearTimeout(rachaT); rachaT = setTimeout(enviarRacha, 1500);
+  }
+}
+// Se llama cuando la racha se rompe (fallo, pista o partida nueva)
+function streakReset(fuente = "main") {
+  const n = rachaViva[fuente] || 0;
+  rachaViva[fuente] = 0;
+  if (n > RACHA_AVISO && profile.alias && CFG.juego) apiPost({ accion: "racha", id: profile.id, racha: n, rota: true, juego: CFG.juego });
+}
+// Al cerrar o salir de la página, la racha en curso también termina
+window.addEventListener("pagehide", () => {
+  for (const f in rachaViva) {
+    const n = rachaViva[f]; rachaViva[f] = 0;
+    if (n > RACHA_AVISO && profile.alias && CFG.juego && navigator.sendBeacon)
+      navigator.sendBeacon(API, new Blob([JSON.stringify({ accion: "racha", id: profile.id, racha: n, rota: true, juego: CFG.juego })], { type: "application/json" }));
+  }
+});
+function enviarRacha() {
+  if (profile.alias) apiPost({ accion: "racha", id: profile.id, racha: LS.get("rachaMax", 0) });
+}
 
 // r = {sec, secs, fallos, pistas, retry, todo}
 function finishRun(r) {
@@ -202,9 +233,9 @@ function finishRun(r) {
   if (!r.fallos) unlock("punteria");
   const prev = progress.best[r.sec]; res.prev = prev || null;
   if (CFG.porAciertos) {
-    // Planes de preguntas: 3 ★ sin fallos, 2 ★ con al menos el 80 % a la primera, 1 ★ el resto
+    // Planes de preguntas: 1 ★ con el 50 % a la primera, 2 ★ con el 80 % y 3 ★ con el 100 %
     const ac = r.primera, total = r.base;
-    res.stars = ac === total ? 3 : ac >= Math.ceil(total * .8) ? 2 : 1;
+    res.stars = ac === total ? 3 : ac >= Math.ceil(total * .8) ? 2 : ac >= Math.ceil(total * .5) ? 1 : 0;
     const prevAc = prev && prev.aciertos != null ? prev.aciertos : -1;
     if (ac > prevAc) { progress.best[r.sec] = { aciertos: ac, total, stars: Math.max(res.stars, prev ? prev.stars || 0 : 0) }; res.record = true; }
     else if (res.stars > (prev.stars || 0)) prev.stars = res.stars;
@@ -348,7 +379,7 @@ function renderLogros() {
   $("lgSecs").innerHTML = exCard + Object.keys(CFG.secciones).map(s => {
     const b = progress.best[s], c = CFG.secciones[s];
     const mejor = !b ? "Sin jugar" : CFG.porAciertos ? (b.aciertos != null ? `Mejor: ${b.aciertos} de ${b.total}` : "Jugada") : "Mejor: " + fmt(b.score);
-    const regla = CFG.porAciertos ? "3 ★ sin fallos · 2 ★ con 8 de cada 10" : `3 ★ por debajo de ${fmtClock(c.estrellas[0])}`;
+    const regla = CFG.porAciertos ? "1 ★ con la mitad · 2 ★ con el 80 % · 3 ★ sin fallos" : `3 ★ por debajo de ${fmtClock(c.estrellas[0])}`;
     return `<div class="sec"><b>${esc(c.nombre)}</b><div class="stars sm">${starsHtml(b ? b.stars || 0 : 0)}</div><small>${mejor}</small><small>${regla}</small></div>`;
   }).join("");
   const n = CFG.ach.filter(a => progress.ach[a.id]).length; $("lgCount").textContent = `${n} de ${CFG.ach.length}`;
