@@ -10,6 +10,7 @@ que se puede cambiar; al cambiarlo se actualiza en todos los rankings.
 - `public/mates/index.html` — Matemáticas: múltiplos, divisores y poliedros.
 - `public/lengua/index.html` — Lengua: determinantes, diptongos, la v, polisémicas y homófonas.
 - `public/tablas/index.html` — Repaso de las tablas de multiplicar.
+- `public/ingles/index.html` — Inglés, Unit 2 At the dig (con los vídeos y juegos de la profesora en cada sección).
 - `public/comun/quiz.js`, `quiz.css` — motor de preguntas que usan mates y lengua.
 - `public/comun/logros.js` — catálogo de logros de todos los planes (lo usa también la portada).
 - `netlify/functions/ranking.mjs` — API `/api/ranking` (datos en Netlify Blobs).
@@ -44,6 +45,7 @@ Planes y secciones:
 - mates: conceptos, multiplos, divisores, divisibilidad, mcd, mcm, poliedros_partes, poliedros_tipos, primos, redondos, problemas
 - lengua: det_encontrar, det_clasificar, vocales, diptongo, letra_v, polisemicas, homofonas
 - tablas: t2 … t10, mezcla
+- ingles: vocab, spelling, tobe, regulares, irregulares, frases, ordenador, repaso1
 
 ## Últimos logros
 La portada muestra los 30 últimos logros conseguidos por cualquier jugador (se guardan en

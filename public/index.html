@@ -45,7 +45,7 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
 .feedlist .ftx small{display:block;color:var(--muted);font-size:.82rem}
 .feedlist .vacio{justify-content:center;color:var(--muted)}
 @keyframes entra{from{transform:translateY(-8px);opacity:0}}
-.tbl{--acc:#15803D}.cn{--acc:#0E7490}
+.tbl{--acc:#15803D}.cn{--acc:#0E7490}.ing{--acc:#B91C1C}
 .soc{--acc:#2E7D9A}.mat{--acc:#C2410C}.len{--acc:#7C3AED}
 </style>
 </head>
@@ -82,6 +82,12 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
       <p>De la tabla del 2 a la del 10: multiplicar, el número que falta y dividir.</p>
       <div class="pie"><span class="st" data-juego="tablas" data-tipo="examen"></span><span class="ir">Jugar</span></div>
     </a>
+    <a class="plan ing" href="ingles/">
+      <span class="ic">🇬🇧</span><span class="asig">Inglés</span>
+      <h2>Unit 2 · At the dig</h2>
+      <p>Vocabulary, spelling, was / were, regular and irregular verbs, past simple y repaso de la Unit 1.</p>
+      <div class="pie"><span class="st" data-juego="ingles" data-tipo="examen"></span><span class="ir">Jugar</span></div>
+    </a>
     <div class="plan cn soon" aria-disabled="true">
       <span class="ic">🔬</span><span class="asig">Ciencias Naturales</span>
       <h2>Próximamente</h2>
@@ -103,7 +109,7 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
 <script src="comun/comun.js"></script>
 <script src="comun/logros.js"></script>
 <script>
-Plan.init({onJugador:()=>{Promise.all(["europa","mates","lengua","tablas"].map(syncJuego)).then(pintarEstrellas);cargarGeneral();cargarFeed()}});
+Plan.init({onJugador:()=>{Promise.all(["europa","mates","lengua","tablas","ingles"].map(syncJuego)).then(pintarEstrellas);cargarGeneral();cargarFeed()}});
 // Resumen de cada plan: logros conseguidos y, según el plan, estrellas (Europa) o mejor examen (Mates, Lengua)
 function pintarEstrellas(){
   document.querySelectorAll(".st[data-juego]").forEach(s=>{
@@ -122,7 +128,7 @@ function pintarEstrellas(){
 }
 pintarEstrellas();
 // Estrellas guardadas en el servidor (por si se borraron los datos del navegador)
-Promise.all(["europa","mates","lengua","tablas"].map(syncJuego)).then(pintarEstrellas);
+Promise.all(["europa","mates","lengua","tablas","ingles"].map(syncJuego)).then(pintarEstrellas);
 
 /* ---------- Últimos logros de todos los jugadores ---------- */
 function hace(f){

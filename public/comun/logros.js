@@ -27,4 +27,9 @@ LOGROS.tablas = [...logrosBase({ pistas: false, tiempo: false, primero: "Primera
   { id: "domador", icon: "🦁", name: "Domador del 7, 8 y 9", desc: "Consigue 3 estrellas en las tablas del 7, del 8 y del 9." },
   { id: "todas", icon: "🎲", name: "Todo mezclado", desc: "Termina Todas mezcladas sin ningún fallo." },
   ...LOGROS_EXAMEN];
-const PLAN_NOMBRE = { europa: "Europa", mates: "Matemáticas", lengua: "Lengua", tablas: "Tablas" };
+LOGROS.ingles = [...logrosBase({ pistas: false, tiempo: false, primero: "First step", pleno: "English star" }),
+  { id: "arqueologo", icon: "⛏️", name: "Arqueólogo", desc: "Termina Vocabulary sin ningún fallo." },
+  { id: "irregular", icon: "👑", name: "Rey de los irregulares", desc: "Termina Irregular verbs sin ningún fallo." },
+  { id: "viajero", icon: "⏳", name: "Viajero en el tiempo", desc: "Consigue 3 estrellas en Was / were, Regular verbs, Irregular verbs y Past simple." },
+  ...LOGROS_EXAMEN];
+const PLAN_NOMBRE = { europa: "Europa", mates: "Matemáticas", lengua: "Lengua", tablas: "Tablas", ingles: "Inglés" };

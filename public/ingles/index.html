@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inglés: Unit 2 At the dig</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇬🇧</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../comun/comun.css">
+<link rel="stylesheet" href="../comun/quiz.css">
+<style>
+/* Estilos propios de Inglés */
+.qtext .dibujo{display:block;font-size:4rem;text-align:center;margin:8px 0 0;line-height:1.1}
+#teo table td{padding:3px 10px}
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../" aria-label="Volver a los planes de trabajo">‹</a>
+  <h1>English</h1>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-view="playview">Jugar</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="rankview">Ranking</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="logview">Logros</button>
+  </div>
+  <button class="who" id="who">👤 <span id="whoTxt">Pon tu nombre</span></button>
+  <button class="icon" id="snd" aria-label="Activar o quitar el sonido">🔊</button>
+</header>
+<main>
+  <section class="view on" id="playview">
+    <div class="bar"><div class="modes" id="modes"></div><button class="btn" id="teoBtn">📖 Teoría</button></div>
+    <div class="recursos" id="recursos" hidden></div>
+    <div class="playarea">
+    <div class="mstage" id="stage">
+      <div class="qcard" id="qcard">
+        <div class="qhead"><span id="qsec"></span><span class="spacer"></span><span class="streak" id="streak"></span><span id="prog"></span><span class="clock" id="time">0:00</span></div>
+        <div class="qtext" id="qtext"></div>
+        <div id="qans"></div>
+        <div class="qfb" id="qfb" hidden></div>
+      </div>
+    </div>
+    <div class="end" id="end"><div class="card">
+      <div class="stars" id="endStars"></div>
+      <div class="big" id="endBig"></div>
+      <p id="endTxt"></p>
+      <div id="endRank"></div>
+      <div class="row"><button class="btn" id="again">Jugar otra vez</button><button class="btn main" id="retry">Repasar los fallos</button></div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="view page" id="rankview">
+    <div class="page-inner">
+      <div class="cap-top"><h2>Ranking</h2><span class="spacer"></span><button class="btn" id="rkReload">Actualizar</button></div>
+      <div class="bar" style="padding:0 0 14px" id="rkSecs"></div>
+      <div id="rkBody"></div>
+      <p class="note">El ranking es el del 📝 Examen: 10 preguntas de todas las secciones, cada acierto es 1 punto de nota y media estrella; con la misma nota, va primero quien la sacó antes. Las prácticas no entran en el ranking, pero suman minutos jugados y partidas.</p>
+    </div>
+  </section>
+
+  <section class="view page" id="logview">
+    <div class="page-inner">
+      <h2 class="h2">Tus estrellas</h2>
+      <div class="secs" id="lgSecs"></div>
+      <h2 class="h2">Logros <span class="note" id="lgCount"></span></h2>
+      <div class="ach" id="lgAch"></div>
+      <p class="note">Las estrellas y los logros se guardan con tu nombre: si entras desde otro dispositivo o se borran los datos del navegador, se recuperan al poner tu nombre.</p>
+    </div>
+  </section>
+</main>
+<dialog id="teo"><div id="teoBody"></div><div class="drow"><button class="btn main" id="teoClose">Entendido</button></div></dialog>
+
+<script src="../comun/comun.js"></script>
+<script src="../comun/logros.js"></script>
+<script src="../comun/quiz.js"></script>
+<script>
+/* =====================================================================
+   Utilidades
+   ===================================================================== */
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const sample=(arr,k)=>shuffle(arr).slice(0,k);
+const mezcla=(...g)=>shuffle(g.flat());
+const veces=(n,f)=>Array.from({length:n},f);
+const op=(texto,ops,sol,extra={})=>({tipo:"op",texto,ops,ok:0,sol,...extra}); // la primera opción es la correcta
+const letras=(texto,resp,sol,extra={})=>({tipo:"letras",texto,resp,sol,...extra});
+const Q=s=>`«${s}»`;
+const frase=s=>`<div class="frase">${s}</div>`;
+const HUECO="_____";
+
+/* =====================================================================
+   Enlaces del documento de la profesora (por sección)
+   ===================================================================== */
+const V=(t,url)=>({t,url,tipo:"video"}),W=(t,url)=>({t,url,tipo:"juego"});
+const R={
+  pastSimple:V("Past simple (Mr. Pea)","https://www.youtube.com/watch?v=KjqqObwEtA4"),
+  pastToBe:V("Past verb to be","https://www.youtube.com/watch?v=aMAsFdOdnRk"),
+  regular:V("Regular verbs","https://www.youtube.com/watch?v=qhfNAAdWPVw"),
+  irregular:V("Irregular verbs","https://www.youtube.com/watch?v=ZQ3e2E2DFQ4"),
+  song:V("Canción: past simple","https://www.youtube.com/watch?v=XMS1JCSsvgk&list=RDXMS1JCSsvgk&start_radio=1"),
+  story:V("Historia: past simple","https://www.youtube.com/watch?v=WDg85KdxFHU"),
+  wToBe:W("Past simple to be","https://wordwall.net/es-es/community/past-simple/to-be"),
+  wPast:W("Past simple","https://wordwall.net/es-ar/community/past-simple/wordwall"),
+  oxford:W("Oxford: material extra","https://elt.oup.com/student/amazingrooftops/level06/?cc=global&selLanguage=en"),
+  u1club:W("Unit 1: at the club","https://wordwall.net/es/resource/35858856/idioma-en-ingl%C3%A9s/rooftops-6-unit-1-at-the-club"),
+  u1poss:W("Unit 1: possessive pronouns","https://wordwall.net/es/resource/36303607/idioma-en-ingl%C3%A9s/rooftops-6-unit-1-possessive-pronouns"),
+  u1can:W("Unit 1: can / can't","https://wordwall.net/es/resource/36222092/idioma-en-ingl%C3%A9s/rooftops-6-unit-1-can-cant"),
+  u2quiz:W("Vocabulary quiz","https://wordwall.net/es/resource/37449835/idioma-en-ingl%C3%A9s/rooftops-6-unit-2-vocabulary-quiz"),
+  u2voc:W("Vocabulary 2.1","https://wordwall.net/es/resource/24492002/6-rooftops-unit-21"),
+  u2amazing:W("Amazing Rooftops 6 Unit 2","https://wordwall.net/es/resource/25503562/amazing-rooftops-6-unit-2"),
+  u2b:W("Unit 2.2","https://wordwall.net/es/resource/24492039/6-rooftops-unit-22"),
+  u2label:W("At the dig: labelled","https://wordwall.net/es/resource/37453138/idioma-en-ingl%C3%A9s/rooftops-6-unit-2-at-the-dig-labelled"),
+  u2past:W("Unit 2 past simple","https://wordwall.net/es/resource/37451413/idioma-en-ingl%C3%A9s/rooftops-6-unit-2-past-simple"),
+  u2story:W("Story vocabulary","https://wordwall.net/es/resource/37455205/idioma-en-ingl%C3%A9s/rooftops-6-unit-2-story-vocabulary-in"),
+  u2spell:W("Spelling","https://wordwall.net/es/resource/37449962/idioma-en-ingl%C3%A9s/rooftops-6-unit-2-spelling"),
+};
+
+/* =====================================================================
+   Vocabulary: At the dig
+   ===================================================================== */
+// [inglés, español, dibujo (si hay uno claro)]
+const VOCAB=[["ring","anillo","💍"],["necklace","collar","📿"],["bracelet","pulsera",""],["coin","moneda","🪙"],["letter","carta","✉️"],
+  ["comb","peine",""],["knife","cuchillo","🔪"],["spoon","cuchara","🥄"],["fork","tenedor","🍴"],["bowl","cuenco (bol)","🥣"],["cup","vaso (taza)","☕"]];
+const qVocEnEs=([en,es])=>op(`¿Qué significa ${Q(en)}?`,[es,...sample(VOCAB.filter(v=>v[0]!==en).map(v=>v[1]),3)],`<b>${en}</b> = ${es}.`);
+const qVocEsEn=([en,es])=>op(`¿Cómo se dice ${Q(es)} en inglés?`,[en,...sample(VOCAB.filter(v=>v[0]!==en).map(v=>v[0]),3)],`${es} = <b>${en}</b>.`);
+const qVocDibujo=([en,es,em])=>op(`What is it?<span class="dibujo">${em}</span>`,[en,...sample(VOCAB.filter(v=>v[0]!==en).map(v=>v[0]),3)],`Es un/una ${es}: <b>${en}</b>.`);
+const qKnives=()=>op("¿Cuál es el plural de «knife»?",["knives","knifes","knife","knivs"],"<b>knife → knives</b>: las palabras que terminan en -fe o -f suelen cambiar a -ves en plural (knife → knives).");
+const genVocab=()=>{const vs=shuffle(VOCAB),con=vs.filter(v=>v[2]);
+  return mezcla(vs.slice(0,3).map(qVocEnEs),vs.slice(3,6).map(qVocEsEn),sample(con,3).map(qVocDibujo),[qKnives()])};
+
+/* =====================================================================
+   Spelling
+   ===================================================================== */
+const MAL={ring:["rin","reeng","rinng"],necklace:["necklase","neclace","necklece"],bracelet:["braselet","bracelett","braslet"],coin:["coyn","koin","coine"],
+  letter:["leter","lettre","letre"],comb:["com","coomb","combe"],knife:["nife","knif","kinfe"],spoon:["spon","spoun","espoon"],fork:["fok","forck","fhork"],
+  bowl:["bol","boul","bowel"],cup:["cap","cupp","coup"],knives:["nives","knifes","knivs"]};
+const qOrdenar=([en,es])=>letras(`Ordena las letras: ${Q(es)} en inglés`,en,`Se escribe <b>${en}</b>.${en==="knife"||en==="comb"?" ¡Ojo con la letra que no se pronuncia!":""}`);
+const qBienEscrita=en=>op("¿Cuál está bien escrita?",[en,...MAL[en]],`Se escribe <b>${en}</b>.`);
+const genSpelling=()=>mezcla(sample(VOCAB,6).map(qOrdenar),sample(Object.keys(MAL),4).map(qBienEscrita));
+
+/* =====================================================================
+   Past simple: to be (was / were)
+   ===================================================================== */
+// [frase con ___, respuesta, explicación]
+const TOBE=[
+  ["I ___ at the dig yesterday.","was","Con <b>I</b> se usa <b>was</b>."],
+  ["The Romans ___ in Britain 2,000 years ago.","were","<b>The Romans</b> es plural (they): <b>were</b>."],
+  ["My grandfather ___ a farmer.","was","<b>My grandfather</b> = he: <b>was</b>."],
+  ["We ___ tired after the trip.","were","Con <b>we</b> se usa <b>were</b>."],
+  ["The coins ___ in an old box.","were","<b>The coins</b> es plural: <b>were</b>."],
+  ["The necklace ___ very old.","was","<b>The necklace</b> = it: <b>was</b>."],
+  ["You ___ at school on Monday.","were","Con <b>you</b> se usa <b>were</b>."],
+  ["She ___ happy with her new bracelet.","was","Con <b>she</b> se usa <b>was</b>."],
+  ["It ___ sunny last weekend.","was","Con <b>it</b> se usa <b>was</b>."],
+  ["They ___ at the museum last Saturday.","were","Con <b>they</b> se usa <b>were</b>."],
+];
+const TOBE_NEG=[
+  ["They ___ at home last night. (✗)","weren't","Negativa plural: <b>weren't</b> (were not)."],
+  ["The bowl ___ made of metal. (✗)","wasn't","Negativa con it: <b>wasn't</b> (was not)."],
+  ["I ___ hungry this morning. (✗)","wasn't","Negativa con I: <b>wasn't</b>."],
+  ["We ___ late for school. (✗)","weren't","Negativa con we: <b>weren't</b>."],
+];
+const TOBE_PREG=[
+  ["___ the bowl made of metal? — Yes, it was.","Was","Pregunta con it: <b>Was</b> it…?"],
+  ["___ they at the museum? — No, they weren't.","Were","Pregunta con they: <b>Were</b> they…?"],
+  ["___ you at the club yesterday? — Yes, I was.","Were","Pregunta con you: <b>Were</b> you…?"],
+  ["Were you tired? — Yes, I ___.","was","Respuesta corta con I: <b>Yes, I was.</b>"],
+  ["Were the Romans clever? — Yes, they ___.","were","Respuesta corta con they: <b>Yes, they were.</b>"],
+];
+const huecoTexto=s=>s.replace("___",`<b>${HUECO}</b>`);
+const qToBe=([f,r,s])=>op(`Complete:${frase(huecoTexto(f))}`,r==="was"||r==="were"?[r,r==="was"?"were":"was"]:[r,...["was","were","wasn't","weren't","Was","Were"].filter(x=>x!==r&&(r[0]===r[0].toUpperCase())===(x[0]===x[0].toUpperCase())).slice(0,3)],s,{orden:null});
+const genToBe=()=>mezcla(sample(TOBE,5).map(qToBe),sample(TOBE_NEG,2).map(qToBe),sample(TOBE_PREG,3).map(qToBe));
+
+/* =====================================================================
+   Regular verbs (-ed)
+   ===================================================================== */
+const REGLA_ED={
+  ed:"La mayoría añade <b>-ed</b>: help → helped.",
+  d:"Si termina en <b>-e</b>, solo se añade <b>-d</b>: live → lived.",
+  ied:"Si termina en consonante + <b>y</b>, la y cambia a <b>-ied</b>: study → studied.",
+  yed:"Si termina en vocal + <b>y</b>, se añade <b>-ed</b> sin cambiar la y: enjoy → enjoyed.",
+  doble:"Si es corto y termina en consonante-vocal-consonante, se dobla la última letra: stop → stopped.",
+};
+// [base, pasado, regla]
+const REGULARES=[["live","lived","d"],["learn","learned","ed"],["enjoy","enjoyed","yed"],["cook","cooked","ed"],["help","helped","ed"],["play","played","yed"],
+  ["watch","watched","ed"],["walk","walked","ed"],["like","liked","d"],["use","used","d"],["dance","danced","d"],["study","studied","ied"],["carry","carried","ied"],
+  ["try","tried","ied"],["stop","stopped","doble"],["plan","planned","doble"],["clean","cleaned","ed"],["visit","visited","ed"],["start","started","ed"],
+  ["finish","finished","ed"],["arrive","arrived","d"],["stay","stayed","yed"],["jump","jumped","ed"],["dig","dug","irr"]].filter(v=>v[2]!=="irr");
+const malED=(b,p)=>[...new Set([b+"ed",b+"d",b.replace(/y$/,"ied"),b+b.slice(-1)+"ed",b.replace(/e$/,"")+"ing"].filter(x=>x!==p))].slice(0,3);
+const qRegOrdenar=([b,p,r])=>letras(`Escribe el pasado de ${Q(b)}`,p,`<b>${b} → ${p}</b>. ${REGLA_ED[r]}`);
+const qRegElegir=([b,p,r])=>op(`¿Cuál es el pasado de ${Q(b)}?`,[p,...malED(b,p)],`<b>${b} → ${p}</b>. ${REGLA_ED[r]}`);
+const qRegla=()=>{const [b,p,r]=pick(REGULARES);return op(`¿Por qué ${Q(b)} se convierte en ${Q(p)}?`,[REGLA_ED[r],...sample(Object.keys(REGLA_ED).filter(k=>k!==r),3).map(k=>REGLA_ED[k])],REGLA_ED[r],{one:true})};
+const genRegulares=()=>{const v=shuffle(REGULARES);return mezcla(v.slice(0,4).map(qRegOrdenar),v.slice(4,8).map(qRegElegir),[qRegla(),qRegla()])};
+
+/* =====================================================================
+   Irregular verbs
+   ===================================================================== */
+// Los de la unidad primero (go, write, drink, have, eat, find) y otros muy usados
+const IRREG=[["go","went"],["write","wrote"],["drink","drank"],["have","had"],["eat","ate"],["find","found"],["see","saw"],["come","came"],["make","made"],
+  ["do","did"],["buy","bought"],["get","got"],["take","took"],["give","gave"],["wear","wore"],["swim","swam"],["run","ran"],["sing","sang"],["say","said"],["dig","dug"]];
+const UNIDAD=IRREG.slice(0,6);
+const malIrr=(b,p)=>[...new Set([b+"ed",b.replace(/e$/,"")+"ed",p+"ed",b+"s"].filter(x=>x!==p))].slice(0,3);
+const qIrrOrdenar=([b,p])=>letras(`Escribe el pasado de ${Q(b)} (irregular)`,p,`<b>${b} → ${p}</b>. Es irregular: hay que aprenderlo de memoria.`);
+const qIrrElegir=([b,p])=>op(`¿Cuál es el pasado de ${Q(b)}?`,[p,...malIrr(b,p)],`<b>${b} → ${p}</b> (irregular).`);
+const qIrrBase=([b,p])=>op(`${Q(p)} es el pasado de…`,[b,...sample(IRREG.filter(v=>v[0]!==b).map(v=>v[0]),3)],`<b>${p}</b> es el pasado de <b>${b}</b>.`);
+const qRegOIrr=()=>{const reg=Math.random()<.5,[b,p]=reg?pick(REGULARES):pick(IRREG);
+  return op(`${Q(b)} → ${Q(p)}: ¿regular o irregular?`,reg?["Regular","Irregular"]:["Irregular","Regular"],reg?`<b>Regular:</b> el pasado se forma con -ed.`:`<b>Irregular:</b> el pasado no termina en -ed.`,{fijo:true,orden:["Regular","Irregular"]})};
+const genIrregulares=()=>mezcla(sample(UNIDAD,3).map(qIrrOrdenar),sample(IRREG.slice(6),2).map(qIrrOrdenar),sample(IRREG,2).map(qIrrElegir),[qIrrBase(pick(IRREG)),qRegOIrr(),qRegOIrr()]);
+
+/* =====================================================================
+   Sentences: past simple con las frases de la unidad
+   ===================================================================== */
+// [sujeto, verbo base, pasado, resto, traducción]
+const ACC=[["live","lived","in stone houses","vivir en casas de piedra"],["write","wrote","letters on stones","escribir cartas en piedras"],["learn","learned","English at school","aprender inglés en el colegio"],
+  ["eat","ate","meat and vegetables","comer carne y verduras"],["wear","wore","necklaces","llevar collares"],["drink","drank","from metal cups","beber de vasos de metal"],
+  ["watch","watched","a DVD","ver un DVD"],["do","did","my homework","hacer mis deberes"],["play","played","computer games","jugar a juegos de ordenador"],["go","went","online","conectarse a internet"]];
+const tercera=b=>/(ch|sh|s|x|o)$/.test(b)?b+"es":b+"s";
+const gerundio=b=>b.endsWith("ie")?b.slice(0,-2)+"ying":/[^e]e$/.test(b)?b.slice(0,-1)+"ing":b+"ing";
+const SUJ_ANT=["The Romans","People 2,000 years ago","The children in Roman times"],SUJ_HOY=["I","My sister","We","Tom"],CUANDO=["yesterday","last weekend","last night"];
+const sujeto=a=>["live","write","eat","wear","drink"].includes(a[0])?pick(SUJ_ANT):pick(SUJ_HOY);
+const cuando=a=>["live","write","eat","wear","drink"].includes(a[0])?"":" "+pick(CUANDO);
+function qFraseAfirm(){const a=pick(ACC),s=sujeto(a),fin=cuando(a);
+  return op(`Complete with the past simple:${frase(`${s} <b>${HUECO}</b> ${a[2]}${fin}. (${a[0]})`)}`,[a[1],a[0],tercera(a[0]),gerundio(a[0])],`<b>${s} ${a[1]} ${a[2]}${fin}.</b> En afirmativa se usa el pasado: ${a[0]} → ${a[1]}.`)}
+function qFraseNeg(){const a=pick(ACC),s=sujeto(a),fin=cuando(a);
+  return op(`Complete the negative sentence:${frase(`${s} didn't <b>${HUECO}</b> ${a[2]}${fin}.`)}`,[a[0],a[1],tercera(a[0]),gerundio(a[0])],`<b>${s} didn't ${a[0]} ${a[2]}${fin}.</b> Después de <b>didn't</b> el verbo va en su forma normal (sin -ed).`)}
+function qFrasePreg(){const a=pick(ACC),s=sujeto(a);const si=Math.random()<.5;
+  return Math.random()<.5
+    ?op(`Complete the question:${frase(`<b>${HUECO}</b> ${s.replace(/^The/,"the").replace(/^People/,"people")} ${a[0]} ${a[2]}?`)}`,["Did","Do","Was","Does"],`Las preguntas en pasado empiezan por <b>Did</b> + verbo en forma normal: Did ${s.toLowerCase()} ${a[0]} ${a[2]}?`)
+    :op(`Complete the answer:${frase(`Did you ${a[0]} ${a[2]}? — ${si?"Yes, I":"No, I"} <b>${HUECO}</b>.`)}`,si?["did","didn't","was","do"]:["didn't","did","wasn't","don't"],`Respuesta corta: <b>${si?"Yes, I did.":"No, I didn't."}</b>`)}
+function qFraseCorrecta(){const a=pick(ACC),s=sujeto(a);
+  return op("Which sentence is correct?",[`${s} didn't ${a[0]} ${a[2]}.`,`${s} didn't ${a[1]} ${a[2]}.`,`${s} not ${a[1]} ${a[2]}.`,`${s} don't ${a[1]} ${a[2]}.`],`<b>${s} didn't ${a[0]} ${a[2]}.</b> Negativa: didn't + verbo en forma normal.`,{one:true})}
+function qTraduce(){const a=pick(ACC);
+  return op(`¿Qué significa ${Q(`${a[0]} ${a[2]}`)}?`,[a[3],...sample(ACC.filter(x=>x!==a).map(x=>x[3]),3)],`<b>${a[0]} ${a[2]}</b> = ${a[3]}.`,{one:true})}
+const genFrases=()=>mezcla(veces(3,qFraseAfirm),veces(2,qFraseNeg),veces(2,qFrasePreg),[qFraseCorrecta(),qTraduce(),qTraduce()]);
+
+/* =====================================================================
+   Computer words
+   ===================================================================== */
+const PC=[["go online","conectarse a internet"],["zoom in","ampliar (hacer zoom)"],["click on","pinchar en, hacer clic en"],["log on","iniciar sesión"],
+  ["print out","imprimir"],["scroll up / down","desplazarse arriba / abajo"],["look up","buscar (información)"],["use","usar"]];
+const qPcEnEs=([en,es])=>op(`¿Qué significa ${Q(en)}?`,[es,...sample(PC.filter(v=>v[0]!==en).map(v=>v[1]),3)],`<b>${en}</b> = ${es}.`,{one:true});
+const qPcEsEn=([en,es])=>op(`¿Cómo se dice ${Q(es)}?`,[en,...sample(PC.filter(v=>v[0]!==en).map(v=>v[0]),3)],`${es} = <b>${en}</b>.`);
+const PC_FRASES=[["___ on the icon to open the game.","Click","Para abrir algo pinchas: <b>click on</b>."],["I ___ the word in the dictionary.","looked up","Buscar información: <b>look up</b> (pasado: looked up)."],
+  ["Can you ___ the photo? It's very small.","zoom in","Para ver algo más grande: <b>zoom in</b>."],["I ___ my homework and gave it to the teacher.","printed out","Imprimir: <b>print out</b> (pasado: printed out)."],
+  ["Write your name and password to ___.","log on","Para entrar con tu usuario: <b>log on</b>."]];
+const qPcFrase=([f,r,s])=>op(`Complete:${frase(huecoTexto(f))}`,[r,...sample(["Click","looked up","zoom in","printed out","log on","scroll down"].filter(x=>x.toLowerCase()!==r.toLowerCase()),3)],s);
+const genPc=()=>{const v=shuffle(PC);return mezcla(v.slice(0,4).map(qPcEnEs),v.slice(4,7).map(qPcEsEn),sample(PC_FRASES,3).map(qPcFrase))};
+
+/* =====================================================================
+   Review Unit 1: at the club, possessive pronouns, can / can't
+   ===================================================================== */
+const CLUB=[["feed the animals","dar de comer a los animales"],["play computer games","jugar a juegos de ordenador"],["do crafts","hacer manualidades"],["make a snack","preparar algo de picar"],
+  ["do my homework","hacer mis deberes"],["read a magazine","leer una revista"],["watch a DVD","ver un DVD"],["go online","conectarse a internet"],["practise sport","practicar deporte"],["text my friend","mandar un mensaje a mi amigo"]];
+const qClub=([en,es])=>op(`¿Qué significa ${Q(en)}?`,[es,...sample(CLUB.filter(v=>v[0]!==en).map(v=>v[1]),3)],`<b>${en}</b> = ${es}.`,{one:true});
+const POSS=[["my","I","mine"],["your","you","yours"],["his","he","his"],["her","she","hers"],["our","we","ours"],["their","they","theirs"]];
+const COSAS=["bag","pencil","book","ball","ring","bike"];
+function qPoss(){const [adj,suj,pr]=pick(POSS),c=pick(COSAS),dueño={I:"my",you:"your",he:"his",she:"her",we:"our",they:"their"}[suj];
+  return op(`Complete:${frase(`This is ${dueño} ${c}. It's <b>${HUECO}</b>.`)}`,[pr,...sample(POSS.map(p=>p[2]).filter(x=>x!==pr),3)],`${adj} ${c} → <b>${pr}</b>. Pronombres posesivos: mine, yours, his, hers, ours, theirs.`)}
+const CAN=[["Birds ___ fly.","can"],["Fish ___ fly.","can't"],["Dogs ___ talk.","can't"],["Fish ___ swim.","can"],["Babies ___ drive a car.","can't"],["Cats ___ climb trees.","can"]];
+const qCan=([f,r])=>op(`Complete:${frase(huecoTexto(f))}`,[r,r==="can"?"can't":"can"],`<b>${f.replace("___",r)}</b> ${r==="can"?"(puede)":"(no puede)"}.`,{fijo:true,orden:["can","can't"]});
+const qCanCorta=()=>{const si=Math.random()<.5;return op(`Complete:${frase(`Can you swim? — ${si?"Yes, I":"No, I"} <b>${HUECO}</b>.`)}`,si?["can","can't","do","am"]:["can't","can","don't","am not"],`Respuesta corta: <b>${si?"Yes, I can.":"No, I can't."}</b>`)};
+const genRepaso=()=>mezcla(sample(CLUB,4).map(qClub),veces(3,qPoss),sample(CAN,2).map(qCan),[qCanCorta()]);
+
+/* =====================================================================
+   Secciones (con sus vídeos y juegos)
+   ===================================================================== */
+const SECS_INGLES={ // estrellas: no se usan (van por aciertos), pero el motor las necesita
+  vocab:{nombre:"Vocabulary",estrellas:[60,100],gen:genVocab,recursos:[R.u2quiz,R.u2voc,R.u2label,R.u2amazing,R.oxford]},
+  spelling:{nombre:"Spelling",estrellas:[60,100],gen:genSpelling,recursos:[R.u2spell,R.u2voc]},
+  tobe:{nombre:"Was / were",estrellas:[60,100],gen:genToBe,recursos:[R.pastToBe,R.wToBe]},
+  regulares:{nombre:"Regular verbs",estrellas:[60,100],gen:genRegulares,recursos:[R.regular,R.u2past,R.wPast]},
+  irregulares:{nombre:"Irregular verbs",estrellas:[60,100],gen:genIrregulares,recursos:[R.irregular,R.u2past,R.wPast]},
+  frases:{nombre:"Past simple",estrellas:[60,100],gen:genFrases,recursos:[R.pastSimple,R.song,R.story,R.u2b,R.u2story]},
+  ordenador:{nombre:"Computer words",estrellas:[60,100],gen:genPc,recursos:[R.u2b]},
+  repaso1:{nombre:"Review Unit 1",estrellas:[60,100],gen:genRepaso,recursos:[R.u1club,R.u1poss,R.u1can]},
+};
+
+/* =====================================================================
+   Teoría
+   ===================================================================== */
+const TEORIA_INGLES={
+  vocab:`<h3>At the dig</h3><table>${VOCAB.map(v=>`<tr><td>${v[2]}</td><td><b>${v[0]}</b></td><td>${v[1]}</td></tr>`).join("")}</table><p>Plural de knife: <b>knives</b>.</p>`,
+  spelling:`<h3>Spelling</h3><p>Fíjate en las letras que no se pronuncian: <b>k</b>nife, com<b>b</b>. Y en las dobles: le<b>tt</b>er, sp<b>oo</b>n, ne<b>ck</b>la<b>c</b>e.</p><p>${VOCAB.map(v=>v[0]).join(", ")}, knives.</p>`,
+  tobe:`<h3>Pasado de «to be»</h3><p><b>was:</b> I, he, she, it.<br><b>were:</b> you, we, they.</p><p>Negativa: <b>wasn't / weren't</b>. Pregunta: <b>Was</b> it…? <b>Were</b> they…? Respuesta corta: Yes, I was. / No, they weren't.</p>`,
+  regulares:`<h3>Verbos regulares en pasado</h3><p>${Object.values(REGLA_ED).join("<br>")}</p>`,
+  irregulares:`<h3>Verbos irregulares</h3><p>No terminan en -ed: hay que aprenderlos.</p><table>${IRREG.map(v=>`<tr><td>${v[0]}</td><td><b>${v[1]}</b></td></tr>`).join("")}</table>`,
+  frases:`<h3>Past simple</h3><p><b>Afirmativa:</b> verbo en pasado. The Romans <b>lived</b> in stone houses.<br><b>Negativa:</b> didn't + verbo normal. They <b>didn't live</b> in flats.<br><b>Pregunta:</b> Did + sujeto + verbo normal. <b>Did</b> they <b>live</b> in stone houses? — Yes, they did. / No, they didn't.</p>`,
+  ordenador:`<h3>Computer words</h3><table>${PC.map(v=>`<tr><td><b>${v[0]}</b></td><td>${v[1]}</td></tr>`).join("")}</table>`,
+  repaso1:`<h3>At the club</h3><p>${CLUB.map(v=>`<b>${v[0]}</b>: ${v[1]}`).join("<br>")}</p><h3>Possessive pronouns</h3><p>my → <b>mine</b>, your → <b>yours</b>, his → <b>his</b>, her → <b>hers</b>, our → <b>ours</b>, their → <b>theirs</b>.</p><h3>can / can't</h3><p>Birds <b>can</b> fly. Fish <b>can't</b> fly. Can you swim? — Yes, I can. / No, I can't.</p>`,
+};
+
+/* =====================================================================
+   Arranque
+   ===================================================================== */
+Quiz.init({secs:SECS_INGLES,teoria:TEORIA_INGLES,plan:{
+  juego:"ingles",
+  ach:LOGROS.ingles,
+  onFinish:(r)=>{
+    if(r.sec==="vocab"&&!r.fallos)unlock("arqueologo");
+    if(r.sec==="irregulares"&&!r.fallos)unlock("irregular");
+    if(["tobe","regulares","irregulares","frases"].every(s=>progress.best[s]&&progress.best[s].stars===3))unlock("viajero");
+  },
+}});
+</script>
+</body>
+</html>

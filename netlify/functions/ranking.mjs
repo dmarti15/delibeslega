@@ -35,9 +35,10 @@ const JUEGOS = {
            poliedros_partes: 10, poliedros_tipos: 10, problemas: 25, primos: 10, redondos: 10 },
   lengua: { det_encontrar: 15, det_clasificar: 10, vocales: 8, diptongo: 8, letra_v: 8, polisemicas: 10, homofonas: 10 },
   tablas: { t2: 8, t3: 8, t4: 8, t5: 8, t6: 8, t7: 8, t8: 8, t9: 8, t10: 8, mezcla: 8 },
+  ingles: { vocab: 8, spelling: 10, tobe: 8, regulares: 10, irregulares: 10, frases: 10, ordenador: 8, repaso1: 8 },
 };
 // Planes con examen y tiempo mínimo creíble (s) para hacerlo
-const EXAMENES = { mates: 20, lengua: 20, tablas: 15 };
+const EXAMENES = { mates: 20, lengua: 20, tablas: 15, ingles: 20 };
 const PREGUNTAS_EXAMEN = 10;
 // Planes con ranking de problemas y tiempo mínimo entre dos problemas resueltos (ms)
 const PROBLEMAS = { mates: 8000 };

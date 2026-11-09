@@ -25,6 +25,7 @@ function start(list){
   QH.limpiar&&QH.limpiar();$("end").classList.remove("on");
   if(pendingRank&&pendingRank.p==="end")pendingRank=null;
   const examen=sec==="examen"&&!list;
+  renderRecursos();
   const qs=list?list.map(q=>({...q,again:false})):examen?crearExamen():SECS[sec].gen();
   qs.forEach(q=>{q.base=q});
   queue=qs;total=qs.length;done=0;failed=[];requeued=new Set();busy=false;
@@ -88,13 +89,46 @@ function render(q){
     answer=()=>{if(busy||!val)return;const ok=+val===q.resp;if(run.examen){resolve(ok);return}out.classList.add(ok?"ok":"bad");if(!ok)out.innerHTML=`${val} <span style="color:var(--ok)">→ ${q.resp}</span>`;resolve(ok)};
     answer.press=press;
   }
+  // Letras desordenadas: se tocan en orden para escribir la palabra (spelling, verbos…)
+  if(q.tipo==="letras"){
+    const sol=q.resp.toLowerCase();let letras=[...sol];
+    for(let t=0;t<10&&letras.join("")===sol;t++)letras=shuffle(letras);
+    const usados=[];
+    box.insertAdjacentHTML("beforeend",`<div class="padout empty" id="padout">Toca las letras en orden</div>
+      <div class="tiles">${letras.map((l,i)=>`<button class="tile-l" data-i="${i}">${l===" "?"␣":esc(l)}</button>`).join("")}</div>
+      <div class="keys2"><button class="key" data-k="del" aria-label="Borrar">⌫</button><button class="key k-go" data-k="go">${run.examen?"Responder":"Comprobar"}</button></div>`);
+    const out=$("padout"),tiles=[...box.querySelectorAll(".tile-l")];
+    const val=()=>usados.map(i=>letras[i]).join("");
+    const upd=()=>{out.textContent=val()||"Toca las letras en orden";out.classList.toggle("empty",!usados.length);tiles.forEach((b,i)=>b.disabled=usados.includes(i))};
+    const press=k=>{
+      if(busy)return;
+      if(k==="go"){if(usados.length)answer();return}
+      if(k==="del"){usados.pop();upd();return}
+      if(typeof k==="number"){if(!usados.includes(k))usados.push(k);upd();return}
+      const i=tiles.findIndex((b,j)=>!usados.includes(j)&&letras[j].toLowerCase()===k.toLowerCase());if(i>=0){usados.push(i);upd()}
+    };
+    tiles.forEach((b,i)=>b.onclick=()=>press(i));
+    box.querySelectorAll(".keys2 .key").forEach(b=>b.onclick=()=>press(b.dataset.k));
+    answer=()=>{if(busy||!usados.length)return;const ok=val()===sol;if(run.examen){resolve(ok);return}
+      out.classList.add(ok?"ok":"bad");if(!ok)out.innerHTML=`${esc(val())} <span style="color:var(--ok)">→ ${esc(q.resp)}</span>`;resolve(ok)};
+    answer.press=press;
+  }
 }
-// Teclado físico: números, borrar e Intro
+// Enlaces a los vídeos y juegos de la sección (si la sección los tiene y la página tiene #recursos)
+function renderRecursos(){
+  const r=$("recursos");if(!r)return;
+  const lista=sec!=="examen"&&SECS[sec]&&SECS[sec].recursos||[];
+  r.hidden=!lista.length;
+  r.innerHTML=lista.length?`<span class="rtit">Del profe:</span>`+lista.map(x=>`<a href="${x.url}" target="_blank" rel="noopener">${x.tipo==="video"?"📺":"🎮"} ${esc(x.t)}</a>`).join(""):"";
+}
+// Teclado físico: números, letras, borrar e Intro
 document.addEventListener("keydown",e=>{
   if(!viewOn("playview")||!cur||$("prof").open||$("teo").open)return;
   if(!$("qfb").hidden&&(e.key==="Enter"||e.key===" ")){e.preventDefault();$("fbNext").click();return}
   if(cur.tipo==="num"&&answer&&answer.press){
     if(/^\d$/.test(e.key))answer.press(e.key);else if(e.key==="Backspace")answer.press("del");else if(e.key==="Enter")answer.press("go");
+  }else if(cur.tipo==="letras"&&answer&&answer.press){
+    if(/^[\p{L}' ]$/u.test(e.key)){e.preventDefault();answer.press(e.key)}else if(e.key==="Backspace")answer.press("del");else if(e.key==="Enter")answer.press("go");
   }else if(cur.tipo==="multi"&&e.key==="Enter"&&answer)answer();
 });
 function resolve(ok){
