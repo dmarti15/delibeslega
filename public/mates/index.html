@@ -271,26 +271,26 @@ function qHueco(){
 const genDivisibilidad=()=>mezcla(veces(6,qCriterios),veces(2,qCualCriterio),veces(2,qHueco));
 
 /* =====================================================================
-   m.c.d. y m.c.m.
+   M.C.D. y m.c.m.
    ===================================================================== */
-function solMcd(nums,g){
+function solMCD(nums,g){
   const ds=nums.map(divs),comunes=new Set(ds[0].filter(x=>ds.every(d=>d.includes(x))));
   return nums.map((n,i)=>`Divisores de ${n}: ${lista(ds[i],comunes)}`).join("<br>")+`<br>Comunes: ${[...comunes].join(", ")}. El mayor es <b>${g}</b>.`;
 }
-function qMcd2(){
+function qMCD2(){
   for(;;){
     const g=Math.random()<.1?1:rnd(2,12),x=rnd(1,8),y=rnd(2,9);
     if(x>=y||gcd(x,y)!==1)continue;
     const a=g*x,b=g*y;if(a<4||b>100)continue;
-    return {tipo:"num",texto:`Calcula el m.c.d. de ${N(a)} y ${N(b)}`,resp:g,sol:solMcd([a,b],g)};
+    return {tipo:"num",texto:`Calcula el M.C.D. de ${N(a)} y ${N(b)}`,resp:g,sol:solMCD([a,b],g)};
   }
 }
-function qMcd3(){
+function qMCD3(){
   for(;;){
     const g=rnd(2,6),[x,y,z]=sample(range(1,8),3).sort((p,q)=>p-q);
     if(gcd(gcd(x,y),z)!==1||g*z>60)continue;
     const ns=[g*x,g*y,g*z];
-    return {tipo:"num",texto:`Calcula el m.c.d. de ${N(ns[0])}, ${N(ns[1])} y ${N(ns[2])}`,resp:g,sol:solMcd(ns,g)};
+    return {tipo:"num",texto:`Calcula el M.C.D. de ${N(ns[0])}, ${N(ns[1])} y ${N(ns[2])}`,resp:g,sol:solMCD(ns,g)};
   }
 }
 function solMcm(nums,l){
@@ -310,7 +310,7 @@ function qMcm3(){
     return {tipo:"num",texto:`Calcula el m.c.m. de ${N(ns[0])}, ${N(ns[1])} y ${N(ns[2])}`,resp:l,sol:solMcm(ns,l)};
   }
 }
-const genMcd=()=>mezcla(veces(8,qMcd2),veces(2,qMcd3));
+const genMCD=()=>mezcla(veces(8,qMCD2),veces(2,qMCD3));
 const genMcm=()=>mezcla(veces(8,qMcm2),veces(2,qMcm3));
 
 /* =====================================================================
@@ -520,9 +520,9 @@ const NOMBRES=["Ana","Luis","Marta","Pablo","Lucía","Hugo","Sara","Mario","Carl
 const dosNombres=()=>sample(NOMBRES,2);
 const prob=(texto,resp,sol)=>({tipo:"num",largo:true,texto,resp,sol,nota:"Escribe solo el número, sin unidades."});
 const pareja=(rango,max,evitarMultiplo=true)=>{for(;;){const a=pick(rango),b=pick(rango);if(a>=b)continue;const l=lcm(a,b);if(l>max)continue;if(evitarMultiplo&&l===b&&Math.random()<.7)continue;return[a,b,l]}};
-const parejaMcd=(gs,xs,max)=>{for(;;){const g=pick(gs),x=pick(xs),y=pick(xs);if(x>=y||gcd(x,y)!==1||g*y>max)continue;return[g*x,g*y,g]}};
+const parejaMCD=(gs,xs,max)=>{for(;;){const g=pick(gs),x=pick(xs),y=pick(xs);if(x>=y||gcd(x,y)!==1||g*y>max)continue;return[g*x,g*y,g]}};
 const porQueMcm="Buscamos cuándo vuelven a coincidir: un múltiplo común de los dos números, el más pequeño. Por eso calculamos el <b>m.c.m.</b>";
-const porQueMcd="Buscamos el número más grande que divide a los dos sin que sobre nada. Por eso calculamos el <b>m.c.d.</b>";
+const porQueMCD="Buscamos el número más grande que divide a los dos sin que sobre nada. Por eso calculamos el <b>M.C.D.</b>";
 const solProb=(porque,calculo,solucion)=>`${porque}<br><br>${calculo}<br><br><b>Solución:</b> ${solucion}`;
 const PROB_MCM=[
   ()=>{const [n1,n2]=dosNombres(),[a,b,l]=pareja(range(2,10),60);
@@ -539,21 +539,21 @@ const PROB_MCM=[
       solProb("Tiene que ser múltiplo de los dos números y el más pequeño posible: el <b>m.c.m.</b>",solMcm([a,b],l),`<b>${l} caramelos</b>.`))},
 ];
 const PROB_MCD=[
-  ()=>{const [x,y,g]=parejaMcd(range(4,12),range(2,7),100);
+  ()=>{const [x,y,g]=parejaMCD(range(4,12),range(2,7),100);
     return prob(`Tenemos dos cuerdas de ${x} cm y ${y} cm. Queremos cortarlas en trozos iguales, lo más largos posible, sin que sobre nada. ¿Cuántos centímetros medirá cada trozo?`,g,
-      solProb(porQueMcd,solMcd([x,y],g),`cada trozo medirá <b>${g} cm</b>.`))},
-  ()=>{const [x,y,g]=parejaMcd(range(3,10),range(2,7),70),t=x/g+y/g;
+      solProb(porQueMCD,solMCD([x,y],g),`cada trozo medirá <b>${g} cm</b>.`))},
+  ()=>{const [x,y,g]=parejaMCD(range(3,10),range(2,7),70),t=x/g+y/g;
     return prob(`Tenemos dos cuerdas de ${x} cm y ${y} cm. Las cortamos en trozos iguales, lo más largos posible, sin que sobre nada. ¿Cuántos trozos saldrán en total?`,t,
-      solProb(porQueMcd+" para saber cuánto mide cada trozo.",solMcd([x,y],g),`cada trozo mide ${g} cm: ${x} : ${g} = ${x/g} trozos y ${y} : ${g} = ${y/g} trozos. En total, ${x/g} + ${y/g} = <b>${t} trozos</b>.`))},
-  ()=>{const [x,y,g]=parejaMcd(range(3,12),range(2,8),96);
+      solProb(porQueMCD+" para saber cuánto mide cada trozo.",solMCD([x,y],g),`cada trozo mide ${g} cm: ${x} : ${g} = ${x/g} trozos y ${y} : ${g} = ${y/g} trozos. En total, ${x/g} + ${y/g} = <b>${t} trozos</b>.`))},
+  ()=>{const [x,y,g]=parejaMCD(range(3,12),range(2,8),96);
     return prob(`En una floristería hay ${x} rosas y ${y} margaritas. Quieren hacer el mayor número posible de ramos iguales sin que sobre ninguna flor. ¿Cuántos ramos podrán hacer?`,g,
-      solProb("El número de ramos tiene que dividir a las dos cantidades sin que sobre nada, y ser el mayor posible: el <b>m.c.d.</b>",solMcd([x,y],g),`podrán hacer <b>${g} ramos</b>, cada uno con ${x/g} rosas y ${y/g} margaritas.`))},
-  ()=>{const [x,y,g]=parejaMcd(range(3,12),range(2,8),96);
+      solProb("El número de ramos tiene que dividir a las dos cantidades sin que sobre nada, y ser el mayor posible: el <b>M.C.D.</b>",solMCD([x,y],g),`podrán hacer <b>${g} ramos</b>, cada uno con ${x/g} rosas y ${y/g} margaritas.`))},
+  ()=>{const [x,y,g]=parejaMCD(range(3,12),range(2,8),96);
     return prob(`Queremos repartir ${x} lápices y ${y} gomas entre el mayor número posible de alumnos, de forma que todos reciban lo mismo y no sobre nada. ¿Entre cuántos alumnos los repartiremos?`,g,
-      solProb("El número de alumnos tiene que dividir a las dos cantidades y ser el mayor posible: el <b>m.c.d.</b>",solMcd([x,y],g),`entre <b>${g} alumnos</b>; cada uno recibe ${x/g} lápices y ${y/g} gomas.`))},
-  ()=>{const [x,y,g]=parejaMcd([2,3,4,5,6],range(2,7),40);
+      solProb("El número de alumnos tiene que dividir a las dos cantidades y ser el mayor posible: el <b>M.C.D.</b>",solMCD([x,y],g),`entre <b>${g} alumnos</b>; cada uno recibe ${x/g} lápices y ${y/g} gomas.`))},
+  ()=>{const [x,y,g]=parejaMCD([2,3,4,5,6],range(2,7),40);
     return prob(`Un patio mide ${y} m de largo y ${x} m de ancho. Queremos cubrirlo con baldosas cuadradas, lo más grandes posible, sin cortar ninguna. ¿Cuántos metros medirá el lado de cada baldosa?`,g,
-      solProb("El lado tiene que caber un número exacto de veces en el largo y en el ancho, y ser lo más grande posible: el <b>m.c.d.</b>",solMcd([x,y],g),`cada baldosa medirá <b>${g} m</b> de lado.`))},
+      solProb("El lado tiene que caber un número exacto de veces en el largo y en el ancho, y ser lo más grande posible: el <b>M.C.D.</b>",solMCD([x,y],g),`cada baldosa medirá <b>${g} m</b> de lado.`))},
 ];
 const PROB_OTROS=[
   ()=>{const n=pick([12,18,20,24,28,30,36]),d=divs(n),f=d.length-2;
@@ -675,7 +675,7 @@ const SECS_MATES={ // estrellas: [segundos para 3 estrellas, segundos para 2]
   multiplos:{nombre:"Múltiplos",estrellas:[90,150],gen:genMultiplos},
   divisores:{nombre:"Divisores",estrellas:[100,160],gen:genDivisores},
   divisibilidad:{nombre:"Divisibilidad",estrellas:[80,130],gen:genDivisibilidad},
-  mcd:{nombre:"m.c.d.",estrellas:[120,200],gen:genMcd},
+  MCD:{nombre:"M.C.D.",estrellas:[120,200],gen:genMCD},
   mcm:{nombre:"m.c.m.",estrellas:[120,200],gen:genMcm},
   poliedros_partes:{nombre:"Poliedros: partes",estrellas:[60,100],gen:genPartes},
   poliedros_tipos:{nombre:"Poliedros: tipos",estrellas:[60,100],gen:genTipos},
@@ -698,9 +698,9 @@ const TEORIA_MATES={
   divisibilidad:`<h3>Criterios de divisibilidad</h3><p>Sirven para saber si una división es exacta sin hacerla.</p>
     <p><b>Entre 2:</b> termina en 0 o en cifra par.<br><b>Entre 3:</b> la suma de sus cifras es múltiplo de 3.<br><b>Entre 5:</b> termina en 0 o en 5.<br><b>Entre 9:</b> la suma de sus cifras es múltiplo de 9.</p>
     <p>Ejemplo: 4.230 → termina en 0 (divisible entre 2 y entre 5); 4 + 2 + 3 + 0 = 9 (divisible entre 3 y entre 9).</p>`,
-  mcd:`<h3>Máximo común divisor (m.c.d.)</h3><p>Es el mayor de los divisores que tienen en común varios números.</p>
-    <p>1. Escribe los divisores de cada número.<br>2. Rodea los que se repiten.<br>3. El más grande es el m.c.d.</p>
-    <p>Divisores de 12: 1, 2, 3, 4, 6, 12. Divisores de 18: 1, 2, 3, 6, 9, 18. Comunes: 1, 2, 3, 6 → <b>m.c.d. (12, 18) = 6</b>.</p>`,
+  MCD:`<h3>Máximo común divisor (M.C.D.)</h3><p>Es el mayor de los divisores que tienen en común varios números.</p>
+    <p>1. Escribe los divisores de cada número.<br>2. Rodea los que se repiten.<br>3. El más grande es el M.C.D.</p>
+    <p>Divisores de 12: 1, 2, 3, 4, 6, 12. Divisores de 18: 1, 2, 3, 6, 9, 18. Comunes: 1, 2, 3, 6 → <b>M.C.D. (12, 18) = 6</b>.</p>`,
   mcm:`<h3>Mínimo común múltiplo (m.c.m.)</h3><p>Es el menor de los múltiplos (sin contar el 0) que tienen en común varios números.</p>
     <p>1. Escribe los primeros múltiplos de cada número.<br>2. Busca el primero que aparece en todas las listas.</p>
     <p>Múltiplos de 4: 4, 8, 12, 16, 20, 24… Múltiplos de 6: 6, 12, 18, 24… → <b>m.c.m. (4, 6) = 12</b>.</p>`,
@@ -713,8 +713,8 @@ const TEORIA_MATES={
   redondos:`<h3>Cuerpos redondos</h3><p>Tienen alguna superficie curva.</p>
     <p><b>Cilindro:</b> dos bases circulares iguales y paralelas, y una superficie lateral curva (como una lata).<br><b>Cono:</b> una base circular, una superficie lateral curva y un vértice (como un cucurucho).<br><b>Esfera:</b> toda su superficie es curva; tiene centro y radio (como un balón).</p>`,
   problemas:`<h3>Cómo resolver un problema</h3><p>1. Lee el problema dos veces y subraya los datos.<br>2. Piensa qué te preguntan.<br>3. Decide la operación.<br>4. Calcula y comprueba que la respuesta tiene sentido.</p>
-    <h3>¿m.c.m. o m.c.d.?</h3><p><b>m.c.m.</b> cuando algo se repite y buscas cuándo vuelve a <b>coincidir</b> (autobuses, faros, ir a la piscina) o el número más pequeño que se puede repartir en grupos de varios tamaños.</p>
-    <p><b>m.c.d.</b> cuando hay que <b>dividir o repartir</b> en partes iguales lo más grandes posible, sin que sobre nada (cortar cuerdas, hacer ramos, poner baldosas).</p>
+    <h3>¿m.c.m. o M.C.D.?</h3><p><b>m.c.m.</b> cuando algo se repite y buscas cuándo vuelve a <b>coincidir</b> (autobuses, faros, ir a la piscina) o el número más pequeño que se puede repartir en grupos de varios tamaños.</p>
+    <p><b>M.C.D.</b> cuando hay que <b>dividir o repartir</b> en partes iguales lo más grandes posible, sin que sobre nada (cortar cuerdas, hacer ramos, poner baldosas).</p>
     <h3>Múltiplos y divisores</h3><p>Hacer grupos iguales sin que sobre nadie → <b>divisores</b>. Contar de 5 en 5, de 7 en 7… → <b>múltiplos</b>.</p>`,
   poliedros_tipos:`<h3>Prismas</h3><p>Dos bases iguales y paralelas; caras laterales rectangulares. Se nombran por su base: prisma triangular, cuadrangular, pentagonal, hexagonal…</p>
     <h3>Pirámides</h3><p>Una base; caras laterales triangulares que se unen en un vértice. También se nombran por su base.</p>
@@ -732,7 +732,7 @@ Quiz.init({secs:SECS_MATES,teoria:TEORIA_MATES,mostrar:q=>{if(q.solido)mostrarSo
     if(!r.fallos){progress.sinFallos[r.sec]=true;saveProgress()}
     if(r.sec==="divisibilidad"&&!r.fallos)unlock("detective");
     if(r.sec==="primos"&&!r.fallos)unlock("eratostenes");
-    if(progress.sinFallos.mcd&&progress.sinFallos.mcm)unlock("calculadora");
+    if(progress.sinFallos.MCD&&progress.sinFallos.mcm)unlock("calculadora");
     if(["poliedros_partes","poliedros_tipos"].every(s=>progress.best[s]&&progress.best[s].stars===3))unlock("geometra");
   },
 }});

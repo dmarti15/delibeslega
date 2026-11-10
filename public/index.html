@@ -88,12 +88,12 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
       <p>Vocabulary, spelling, was / were, regular and irregular verbs, past simple y repaso de la Unit 1.</p>
       <div class="pie"><span class="st" data-juego="ingles" data-tipo="examen"></span><span class="ir">Jugar</span></div>
     </a>
-    <div class="plan cn soon" aria-disabled="true">
+    <a class="plan cn" href="naturales/">
       <span class="ic">🔬</span><span class="asig">Ciencias Naturales</span>
-      <h2>Próximamente</h2>
-      <p>Muy pronto, el plan de trabajo de Ciencias Naturales.</p>
-      <div class="pie"><span class="st"></span><span class="ir">Pronto</span></div>
-    </div>
+      <h2>La nutrición</h2>
+      <p>Aparatos digestivo, circulatorio, respiratorio y excretor, alimentación sana y ejercicio.</p>
+      <div class="pie"><span class="st" data-juego="naturales" data-tipo="examen"></span><span class="ir">Jugar</span></div>
+    </a>
   </div>
   <section class="general">
     <h2 class="h2">🏆 Ranking general</h2>
@@ -109,7 +109,7 @@ a.plan:focus-visible{outline:3px solid var(--target);outline-offset:3px}
 <script src="comun/comun.js"></script>
 <script src="comun/logros.js"></script>
 <script>
-Plan.init({onJugador:()=>{Promise.all(["europa","mates","lengua","tablas","ingles"].map(syncJuego)).then(pintarEstrellas);cargarGeneral();cargarFeed()}});
+Plan.init({onJugador:()=>{Promise.all(["europa","mates","lengua","tablas","ingles","naturales"].map(syncJuego)).then(pintarEstrellas);cargarGeneral();cargarFeed()}});
 // Resumen de cada plan: logros conseguidos y, según el plan, estrellas (Europa) o mejor examen (Mates, Lengua)
 function pintarEstrellas(){
   document.querySelectorAll(".st[data-juego]").forEach(s=>{
@@ -128,7 +128,7 @@ function pintarEstrellas(){
 }
 pintarEstrellas();
 // Estrellas guardadas en el servidor (por si se borraron los datos del navegador)
-Promise.all(["europa","mates","lengua","tablas","ingles"].map(syncJuego)).then(pintarEstrellas);
+Promise.all(["europa","mates","lengua","tablas","ingles","naturales"].map(syncJuego)).then(pintarEstrellas);
 
 /* ---------- Últimos logros de todos los jugadores ---------- */
 function hace(f){

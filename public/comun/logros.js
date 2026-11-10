@@ -32,4 +32,9 @@ LOGROS.ingles = [...logrosBase({ pistas: false, tiempo: false, primero: "First s
   { id: "irregular", icon: "👑", name: "Rey de los irregulares", desc: "Termina Irregular verbs sin ningún fallo." },
   { id: "viajero", icon: "⏳", name: "Viajero en el tiempo", desc: "Consigue 3 estrellas en Was / were, Regular verbs, Irregular verbs y Past simple." },
   ...LOGROS_EXAMEN];
-const PLAN_NOMBRE = { europa: "Europa", mates: "Matemáticas", lengua: "Lengua", tablas: "Tablas", ingles: "Inglés" };
+LOGROS.naturales = [...logrosBase({ pistas: false, tiempo: false, primero: "Primer órgano", pleno: "Médico del futuro" }),
+  { id: "corazon", icon: "❤️", name: "Corazón de campeón", desc: "Termina Corazón y sangre sin ningún fallo." },
+  { id: "pulmones", icon: "🫁", name: "Pulmones de atleta", desc: "Termina Aparato respiratorio sin ningún fallo." },
+  { id: "vidasana", icon: "🥗", name: "Vida sana", desc: "Termina Salud, dieta y ejercicio sin ningún fallo." },
+  ...LOGROS_EXAMEN];
+const PLAN_NOMBRE = { europa: "Europa", mates: "Matemáticas", lengua: "Lengua", tablas: "Tablas", ingles: "Inglés", naturales: "Naturales" };

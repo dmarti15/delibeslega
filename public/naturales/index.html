@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ciencias Naturales: la nutrición</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔬</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../comun/comun.css">
+<link rel="stylesheet" href="../comun/quiz.css">
+<style>
+/* Estilos propios de Ciencias Naturales */
+#teo h3{color:var(--ok)}
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../" aria-label="Volver a los planes de trabajo">‹</a>
+  <h1>Naturales</h1>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-view="playview">Jugar</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="rankview">Ranking</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="logview">Logros</button>
+  </div>
+  <button class="who" id="who">👤 <span id="whoTxt">Pon tu nombre</span></button>
+  <button class="icon" id="snd" aria-label="Activar o quitar el sonido">🔊</button>
+</header>
+<main>
+  <section class="view on" id="playview">
+    <div class="bar"><div class="modes" id="modes"></div><button class="btn" id="teoBtn">📖 Teoría</button></div>
+    <div class="playarea">
+    <div class="mstage" id="stage">
+      <div class="qcard" id="qcard">
+        <div class="qhead"><span id="qsec"></span><span class="spacer"></span><span class="streak" id="streak"></span><span id="prog"></span><span class="clock" id="time">0:00</span></div>
+        <div class="qtext" id="qtext"></div>
+        <div id="qans"></div>
+        <div class="qfb" id="qfb" hidden></div>
+      </div>
+    </div>
+    <div class="end" id="end"><div class="card">
+      <div class="stars" id="endStars"></div>
+      <div class="big" id="endBig"></div>
+      <p id="endTxt"></p>
+      <div id="endRank"></div>
+      <div class="row"><button class="btn" id="again">Jugar otra vez</button><button class="btn main" id="retry">Repasar los fallos</button></div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="view page" id="rankview">
+    <div class="page-inner">
+      <div class="cap-top"><h2>Ranking</h2><span class="spacer"></span><button class="btn" id="rkReload">Actualizar</button></div>
+      <div class="bar" style="padding:0 0 14px" id="rkSecs"></div>
+      <div id="rkBody"></div>
+      <p class="note">El ranking es el del 📝 Examen: 10 preguntas de todas las secciones, cada acierto es 1 punto de nota y media estrella; con la misma nota, va primero quien la sacó antes. Las prácticas no entran en el ranking, pero suman minutos jugados y partidas.</p>
+    </div>
+  </section>
+
+  <section class="view page" id="logview">
+    <div class="page-inner">
+      <h2 class="h2">Tus estrellas</h2>
+      <div class="secs" id="lgSecs"></div>
+      <h2 class="h2">Logros <span class="note" id="lgCount"></span></h2>
+      <div class="ach" id="lgAch"></div>
+      <p class="note">Las estrellas y los logros se guardan con tu nombre: si entras desde otro dispositivo o se borran los datos del navegador, se recuperan al poner tu nombre.</p>
+    </div>
+  </section>
+</main>
+<dialog id="teo"><div id="teoBody"></div><div class="drow"><button class="btn main" id="teoClose">Entendido</button></div></dialog>
+
+<script src="../comun/comun.js"></script>
+<script src="../comun/logros.js"></script>
+<script src="../comun/quiz.js"></script>
+<script>
+/* =====================================================================
+   Utilidades
+   ===================================================================== */
+const sample=(arr,k)=>shuffle(arr).slice(0,k);
+const mezcla=(...g)=>shuffle(g.flat());
+// Pregunta de opciones: [enunciado, correcta, [incorrectas], explicación, una columna?]
+const P=(t,ok,mal,sol,one)=>({t,ok,mal,sol,one});
+const aOp=p=>({tipo:"op",texto:p.t,ops:[p.ok,...sample(p.mal,3)],ok:0,sol:p.sol,one:p.one||[p.ok,...p.mal].some(x=>x.length>24)});
+// Verdadero o falso (como en «Comprendo, aplico y razono»)
+const VF=(t,v,sol)=>({t,v,sol});
+const aVF=x=>({tipo:"op",texto:`¿Verdadero o falso?<div class="frase">${x.t}</div>`,ops:["Verdadero","Falso"],ok:x.v?0:1,fijo:true,sol:(x.v?"<b>Verdadero.</b> ":"<b>Falso.</b> ")+x.sol});
+// Marcar varias: [enunciado, [correctas], [incorrectas], explicación]
+const M=(t,ok,mal,sol)=>({t,ok,mal,sol});
+const aMulti=m=>{const items=shuffle([...m.ok,...m.mal]);return {tipo:"multi",palabras:true,texto:m.t,items,ok:items.map((x,i)=>m.ok.includes(x)?i:-1).filter(i=>i>=0),sol:m.sol}};
+// Cada partida: 10 preguntas = 2 de verdadero o falso, 1 de marcar varias (si la sección tiene) y el resto de opciones
+const gen=(ops,vfs,multis=[])=>()=>{
+  const nm=multis.length?1:0;
+  return mezcla(sample(ops,10-Math.min(2,vfs.length)-nm).map(aOp),sample(vfs,2).map(aVF),sample(multis,nm).map(aMulti));
+};
+
+/* =====================================================================
+   El aparato digestivo
+   ===================================================================== */
+const DIG_OPS=[
+  P("¿Para qué sirve el aparato digestivo?","Para transformar los alimentos en sustancias que pasan a la sangre",["Para llevar el oxígeno a las células","Para limpiar la sangre de desechos","Para mover los huesos"],"Transforma los alimentos en sustancias que pueden ser absorbidas y pasar a la sangre. Ese proceso se llama <b>digestión</b>."),
+  P("El aparato digestivo está formado por…","el tubo digestivo y las glándulas digestivas",["el corazón y los vasos sanguíneos","los riñones y la vejiga","la tráquea y los pulmones"],"Está formado por el <b>tubo digestivo</b> y las <b>glándulas digestivas</b>."),
+  P("¿Por dónde entran los alimentos?","Por la boca",["Por el esófago","Por la faringe","Por el estómago"],"La <b>boca</b> es la cavidad por la que entran los alimentos. Allí están los dientes, la lengua y las glándulas salivales."),
+  P("¿Qué órgano lleva el alimento de la boca al estómago?","El esófago",["El intestino delgado","La tráquea","El páncreas"],"Las contracciones de las paredes del <b>esófago</b> llevan el alimento al estómago."),
+  P("¿Qué es el estómago?","Una bolsa muscular que se va llenando a medida que comemos",["Un tubo de siete metros","Una glándula que produce bilis","El órgano que filtra la sangre"],"El <b>estómago</b> es una bolsa muscular. Cuando está lleno dejamos de tener apetito."),
+  P("¿Cuánto mide aproximadamente el intestino delgado?","Unos siete metros",["Unos siete centímetros","Unos dos metros","Un metro"],"El <b>intestino delgado</b> es un tubo de unos <b>siete metros</b>."),
+  P("¿Dónde pasan los nutrientes a la sangre?","En el intestino delgado",["En el estómago","En el esófago","En la boca"],"En el <b>intestino delgado</b> se completa la digestión y los nutrientes pasan a la sangre."),
+  P("¿Cómo es el intestino grueso comparado con el delgado?","Más ancho y mucho más corto",["Más estrecho y más largo","Igual de largo","Más largo y más ancho"],"El <b>intestino grueso</b> es más ancho y mucho más corto que el delgado."),
+  P("¿Qué viven dentro del intestino grueso y producen la vitamina K?","Bacterias",["Glóbulos rojos","Plaquetas","Alvéolos"],"En el colon viven muchas <b>bacterias</b>; algunas producen sustancias que necesitamos, como la vitamina K."),
+  P("¿Por dónde salen las heces al exterior?","Por el ano",["Por la uretra","Por el esófago","Por los uréteres"],"Los restos no digeridos forman las heces, que salen por el <b>ano</b>."),
+  P("¿Qué glándula produce la bilis?","El hígado",["El páncreas","Las glándulas salivales","El estómago"],"El <b>hígado</b> produce la bilis."),
+  P("¿Qué fabrican las glándulas salivales?","La saliva",["La bilis","El jugo pancreático","El jugo gástrico"],"Las <b>glándulas salivales</b> fabrican la saliva."),
+  P("¿Dónde se elabora el jugo pancreático?","En el páncreas",["En el hígado","En el intestino grueso","En la boca"],"En el <b>páncreas</b> se elabora el jugo pancreático."),
+  P("¿Qué fabrican las glándulas del estómago?","El jugo gástrico",["El jugo intestinal","La saliva","La bilis"],"Las glándulas microscópicas del estómago fabrican el <b>jugo gástrico</b>; las del intestino delgado, el jugo intestinal."),
+  P("¿Cómo se llaman las glándulas grandes que están fuera del tubo digestivo?","Glándulas anejas",["Glándulas gástricas","Glándulas sudoríparas","Glándulas intestinales"],"Las <b>glándulas anejas</b> (salivales, hígado y páncreas) están fuera del tubo y vierten sus jugos por conductos."),
+  P("¿Qué va después del estómago en el tubo digestivo?","El intestino delgado",["El esófago","El intestino grueso","La faringe"],"Orden: boca → faringe → esófago → estómago → <b>intestino delgado</b> → intestino grueso → ano."),
+];
+const DIG_VF=[
+  VF("El hígado está en la parte superior del abdomen.",true,"El hígado está arriba, a la derecha del abdomen."),
+  VF("La absorción de los nutrientes se realiza en el intestino grueso.",false,"La absorción de nutrientes se realiza en el <b>intestino delgado</b>."),
+  VF("El esófago está debajo del estómago.",false,"El esófago está <b>encima</b> del estómago: lleva el alimento hasta él."),
+  VF("La parte más larga del aparato digestivo es el intestino delgado.",true,"Mide unos siete metros."),
+  VF("El ano sirve para expulsar los restos digestivos.",true,"Por el ano salen las heces."),
+  VF("Las glándulas digestivas vierten sus jugos al interior del tubo digestivo.",true,"Elaboran los jugos digestivos y los vierten dentro del tubo."),
+];
+const DIG_MULTI=[
+  M("Toca las partes del <b>tubo digestivo</b>",["boca","faringe","esófago","estómago","intestino","ano"],["hígado","páncreas","tráquea","riñón"],"Tubo digestivo: boca, faringe, esófago, estómago, intestinos y ano. El hígado y el páncreas son glándulas; la tráquea y el riñón, de otros aparatos."),
+  M("Toca las <b>glándulas digestivas anejas</b>",["salivales","hígado","páncreas"],["esófago","estómago","pulmón","vejiga"],"Las anejas son las glándulas salivales, el hígado y el páncreas."),
+];
+
+/* =====================================================================
+   La digestión: fases y tipos
+   ===================================================================== */
+const DGN_OPS=[
+  P("¿Cuáles son las cuatro fases de la digestión?","Ingestión, digestión, absorción y defecación",["Inspiración, espiración, absorción y excreción","Masticar, tragar, respirar y digerir","Ingestión, circulación, filtración y excreción"],"Fases: <b>ingestión</b> (entrada por la boca), <b>digestión</b>, <b>absorción</b> (paso a la sangre) y <b>defecación</b>.",true),
+  P("¿Qué es la ingestión?","La entrada de los alimentos por la boca",["El paso de nutrientes a la sangre","La eliminación de los restos","La mezcla con el jugo gástrico"],"La <b>ingestión</b> es el ingreso en la boca de los alimentos."),
+  P("¿Qué es la absorción?","El paso de los nutrientes a la sangre",["La entrada de alimentos por la boca","La salida de las heces","El triturado de los alimentos"],"La <b>absorción</b> es el paso de los nutrientes a la sangre, en el intestino delgado."),
+  P("¿Qué es la defecación?","La eliminación de los restos no digeridos (heces)",["La mezcla con la saliva","El paso de nutrientes a la sangre","La producción de bilis"],"La eliminación de las heces se llama <b>defecación</b>."),
+  P("¿Para qué sirve la saliva?","Para ablandar los alimentos y empezar a digerir los glúcidos",["Para digerir las proteínas","Para absorber el agua","Para producir vitamina K"],"La <b>saliva</b> ablanda los alimentos y empieza a digerir los glúcidos o hidratos de carbono."),
+  P("¿Cómo se llama la papilla que se forma en el estómago?","Quimo",["Bilis","Plasma","Orina"],"El alimento mezclado con el jugo gástrico forma una papilla llamada <b>quimo</b>, que pasa al intestino."),
+  P("¿Cuánto tiempo permanece la comida en el estómago?","Unas dos horas",["Unos cinco minutos","Unos siete días","Unas veinte horas"],"La comida permanece unas <b>dos horas</b> en el estómago."),
+  P("¿Qué se empieza a digerir en el estómago?","Las proteínas",["Los glúcidos","El agua","Las sales minerales"],"En el estómago, con el jugo gástrico (muy ácido), se inicia la digestión de las <b>proteínas</b>."),
+  P("¿Qué se absorbe sobre todo en el intestino grueso?","Gran parte del agua y algunas sales minerales",["Las proteínas","El oxígeno","La bilis"],"En el intestino grueso se absorbe gran parte del <b>agua</b> y parte de las sales minerales."),
+  P("¿En qué consiste la digestión mecánica?","En triturar, desmenuzar y mezclar los alimentos",["En transformar las moléculas en nutrientes","En pasar los nutrientes a la sangre","En filtrar la sangre"],"La <b>digestión mecánica</b> tritura, desmenuza y mezcla el alimento gracias a los dientes, la lengua y las contracciones del tubo."),
+  P("¿En qué consiste la digestión química?","En transformar las grandes moléculas en nutrientes",["En masticar los alimentos","En tragar el alimento","En eliminar las heces"],"La <b>digestión química</b> transforma las grandes moléculas en nutrientes. La realizan los jugos digestivos."),
+  P("¿Dónde comienza la digestión química?","En la boca",["En el estómago","En el intestino grueso","En el esófago"],"Empieza en la <b>boca</b> (saliva), aunque sobre todo ocurre en el estómago y el intestino delgado."),
+  P("¿Dónde termina la digestión mecánica?","En el estómago",["En el ano","En la boca","En el intestino grueso"],"La digestión mecánica empieza en la boca y termina en el <b>estómago</b>."),
+  P("¿Qué nutrientes resultan de la digestión en el intestino delgado?","Glúcidos, lípidos y proteínas",["Oxígeno y dióxido de carbono","Agua y orina","Bilis y saliva"],"El quimo se transforma en moléculas sencillas: <b>glúcidos, lípidos y proteínas</b>."),
+  P("¿Por qué es importante lavarse los dientes después de comer?","Porque los microorganismos de la boca se alimentan de los restos de comida",["Porque así se digiere mejor","Porque la saliva lo necesita","Porque limpia el estómago"],"En la boca viven <b>microorganismos</b> que se alimentan de los restos de comida entre los dientes."),
+];
+const DGN_VF=[
+  VF("En el estómago, los alimentos se digieren completamente.",false,"En el estómago se digieren solo en parte; la digestión se completa en el <b>intestino delgado</b>."),
+  VF("El estómago realiza solo la digestión mecánica.",false,"También hace digestión <b>química</b>: el jugo gástrico empieza a digerir las proteínas."),
+  VF("El jugo gástrico es muy ácido.",true,"Es muy ácido y empieza la digestión de las proteínas."),
+  VF("Es bueno hacer mucho ejercicio justo después de una comida abundante.",false,"Tras comer, la sangre se desvía al intestino para la absorción; hacer ejercicio entonces es peligroso."),
+  VF("Masticar bien los alimentos ayuda a la digestión.",true,"Así se trituran y se mezclan mejor con la saliva."),
+];
+
+/* =====================================================================
+   El aparato circulatorio: corazón, vasos y sangre
+   ===================================================================== */
+const CIR_OPS=[
+  P("¿Qué forma el aparato circulatorio?","El corazón, los vasos sanguíneos y la sangre",["Los pulmones y la tráquea","El estómago y los intestinos","Los riñones y la vejiga"],"Lo forman el <b>corazón</b>, los <b>vasos sanguíneos</b> y la <b>sangre</b>."),
+  P("¿Qué función tiene el corazón?","Impulsar la sangre por todo el cuerpo",["Filtrar la sangre","Producir glóbulos rojos","Absorber nutrientes"],"El corazón impulsa la sangre por todo el cuerpo. Su tamaño es parecido al de un puño cerrado."),
+  P("¿Cuántas cavidades tiene el corazón?","Cuatro: dos aurículas y dos ventrículos",["Dos: una aurícula y un ventrículo","Tres","Seis"],"Tiene cuatro: dos <b>aurículas</b> (arriba) y dos <b>ventrículos</b> (abajo)."),
+  P("¿Cómo se llaman las cavidades superiores del corazón?","Aurículas",["Ventrículos","Válvulas","Alvéolos"],"Las <b>aurículas</b> están arriba; a ellas llega la sangre que traen las venas."),
+  P("¿De qué cavidades sale la sangre hacia las arterias?","De los ventrículos",["De las aurículas","De las válvulas","De los capilares"],"La sangre sale de los <b>ventrículos</b> hacia las arterias."),
+  P("¿Qué separa el corazón en dos mitades?","El tabique",["El diafragma","La válvula","La aorta"],"El <b>tabique</b> divide el corazón a lo largo en dos mitades independientes."),
+  P("¿Para qué sirven las válvulas del corazón?","Para dejar pasar la sangre de la aurícula al ventrículo e impedir que retroceda",["Para producir sangre","Para separar el tórax del abdomen","Para filtrar la sangre"],"La <b>válvula</b> deja pasar la sangre de la aurícula al ventrículo e impide que vuelva atrás.",true),
+  P("¿Por qué lado del corazón pasa la sangre con más oxígeno?","Por el lado izquierdo",["Por el lado derecho","Por los dos igual","Por ninguno"],"Por el lado <b>izquierdo</b> pasa la sangre con más oxígeno."),
+  P("¿Qué vasos llevan la sangre desde el corazón hacia los capilares?","Las arterias",["Las venas","Los bronquios","Los uréteres"],"Las <b>arterias</b> llevan la sangre desde el corazón hacia los capilares."),
+  P("¿Por qué vasos vuelve la sangre al corazón?","Por las venas",["Por las arterias","Por los capilares","Por la tráquea"],"Las <b>venas</b> llevan la sangre desde los capilares de vuelta al corazón."),
+  P("¿Qué son los capilares?","Tubos muy finos que llegan a todas las células",["Las arterias más grandes","Las cavidades del corazón","Células de la sangre"],"Los <b>capilares</b> son tubos muy delgados que conectan arterias y venas y llegan a todas las células."),
+  P("¿Qué células de la sangre transportan el oxígeno?","Los eritrocitos o glóbulos rojos",["Los leucocitos","Las plaquetas","El plasma"],"Los <b>eritrocitos</b> (glóbulos rojos) llevan el oxígeno a las células y el dióxido de carbono a los pulmones."),
+  P("¿Qué células de la sangre nos defienden de los microorganismos?","Los leucocitos o glóbulos blancos",["Los glóbulos rojos","Las plaquetas","Los alvéolos"],"Los <b>leucocitos</b> nos defienden; cuando hay una infección, su número aumenta."),
+  P("¿Qué hacen las plaquetas?","Forman un tapón cuando hay una hemorragia",["Transportan oxígeno","Fabrican la bilis","Filtran la orina"],"Las <b>plaquetas</b> se unen y forman un tapón que detiene la hemorragia."),
+  P("¿Qué es el plasma sanguíneo?","Un líquido amarillento, sobre todo agua, que lleva los nutrientes",["Un tipo de glóbulo rojo","Una cavidad del corazón","Un vaso sanguíneo"],"El <b>plasma</b> es un líquido amarillo formado sobre todo por agua; lleva disueltos los nutrientes.",true),
+  P("¿Qué células de la sangre son las más numerosas?","Los glóbulos rojos",["Los glóbulos blancos","Las plaquetas","Las neuronas"],"Los <b>eritrocitos</b> o glóbulos rojos son las más numerosas; tienen forma de disco."),
+];
+const CIR_VF=[
+  VF("El corazón tiene un tamaño parecido al de un puño cerrado.",true,"Y sus paredes son de tejido muscular."),
+  VF("Las arterias llevan la sangre de vuelta al corazón.",false,"Esas son las <b>venas</b>. Las arterias la llevan desde el corazón."),
+  VF("Los glóbulos blancos tienen color rojo.",false,"A pesar del nombre, no tienen color: son <b>transparentes</b>."),
+  VF("Cuando tenemos una infección aumenta el número de leucocitos.",true,"Los leucocitos nos defienden de los microorganismos."),
+  VF("Los ventrículos están en la parte superior del corazón.",false,"Arriba están las <b>aurículas</b>; los ventrículos están abajo."),
+];
+const CIR_MULTI=[
+  M("Toca las <b>células de la sangre</b>",["eritrocitos","leucocitos","plaquetas"],["alvéolos","bronquios","válvulas","uréteres"],"La sangre tiene plasma y tres tipos de células: eritrocitos, leucocitos y plaquetas."),
+  M("Toca los <b>vasos sanguíneos</b>",["arterias","venas","capilares"],["aurículas","bronquios","uréteres","ventrículos"],"Los vasos sanguíneos son de tres tipos: arterias, venas y capilares."),
+];
+
+/* =====================================================================
+   La circulación de la sangre
+   ===================================================================== */
+const CIRC_OPS=[
+  P("¿Para qué sirve el aparato circulatorio?","Para llevar nutrientes y oxígeno a las células y recoger sus desechos",["Para digerir los alimentos","Para producir orina","Para mover los pulmones"],"Distribuye los nutrientes y el oxígeno a todas las células y recoge las sustancias de desecho.",true),
+  P("¿Por qué decimos que la circulación es doble?","Porque la sangre pasa dos veces por el corazón en cada vuelta",["Porque hay dos corazones","Porque hay dos tipos de sangre","Porque la sangre va y vuelve por el mismo vaso"],"Es <b>doble</b> porque la sangre pasa dos veces por el corazón: una hacia los pulmones y otra hacia el resto del cuerpo.",true),
+  P("¿Por qué decimos que la circulación es cerrada?","Porque la sangre siempre va por dentro de los vasos sanguíneos",["Porque el corazón está cerrado","Porque no sale nunca del corazón","Porque solo circula de noche"],"Es <b>cerrada</b>: la sangre recorre siempre el mismo camino por los vasos.",true),
+  P("¿Cómo se llama el circuito entre el corazón y los pulmones?","Circulación pulmonar o circuito menor",["Circulación general o circuito mayor","Circuito renal","Circuito digestivo"],"El circuito corazón ↔ pulmones es la <b>circulación pulmonar</b> o circuito menor.",true),
+  P("¿Cómo se llama el circuito que va del corazón al resto del cuerpo?","Circulación general o circuito mayor",["Circulación pulmonar o circuito menor","Circuito respiratorio","Circuito urinario"],"El que va al resto del cuerpo es la <b>circulación general</b> o circuito mayor.",true),
+  P("¿De qué cavidad sale la sangre hacia los pulmones?","Del ventrículo derecho",["Del ventrículo izquierdo","De la aurícula izquierda","De la aurícula derecha"],"Sale del <b>ventrículo derecho</b> por la arteria pulmonar."),
+  P("¿Por qué arteria sale la sangre hacia los pulmones?","La arteria pulmonar",["La arteria aorta","La vena cava","La arteria renal"],"Por la <b>arteria pulmonar</b>, que se divide en dos."),
+  P("¿Qué ocurre con la sangre en los pulmones?","Pierde dióxido de carbono y toma oxígeno",["Pierde oxígeno y toma dióxido de carbono","Se llena de nutrientes","Se filtra y forma orina"],"En los pulmones la sangre <b>deja el dióxido de carbono y toma oxígeno</b>."),
+  P("¿Por dónde vuelve la sangre de los pulmones al corazón?","Por las venas pulmonares, a la aurícula izquierda",["Por las venas cavas, a la aurícula derecha","Por la aorta","Por la arteria pulmonar"],"Vuelve por las <b>venas pulmonares</b> y entra en la aurícula izquierda.",true),
+  P("¿Cuál es la arteria más grande del cuerpo?","La aorta",["La arteria pulmonar","La arteria renal","La vena cava"],"La <b>aorta</b>: por ella sale la sangre del ventrículo izquierdo hacia el cuerpo."),
+  P("¿Hacia dónde va la sangre que sale del ventrículo izquierdo?","Al resto del cuerpo, por la aorta",["A los pulmones","Al ventrículo derecho","A los riñones solamente"],"Del ventrículo izquierdo sale por la <b>aorta</b> hacia todo el cuerpo."),
+  P("¿Cómo se llaman las venas que llevan la sangre del cuerpo a la aurícula derecha?","Venas cavas",["Venas pulmonares","Arterias aortas","Capilares"],"Las <b>venas cavas</b> desembocan en la aurícula derecha."),
+  P("¿Qué es un latido?","Cada contracción del corazón",["Cada respiración","Un tipo de vaso","Una célula de la sangre"],"Cada contracción del corazón se llama <b>latido</b>."),
+  P("¿Cuántos latidos por minuto suele tener una persona joven?","Entre 70 y 90",["Entre 10 y 20","Entre 200 y 300","Exactamente 100"],"En personas jóvenes suele haber entre <b>70 y 90</b> latidos por minuto."),
+  P("¿Cómo se llama la contracción de los ventrículos?","Sístole ventricular",["Sístole auricular","Diástole","Espiración"],"En la <b>sístole ventricular</b> los ventrículos se contraen y envían la sangre a las arterias."),
+  P("¿Cómo se llama el momento en que el corazón se relaja?","Diástole",["Sístole","Latido","Inspiración"],"En la <b>diástole</b> el corazón se relaja y la sangre entra desde las venas."),
+];
+const CIRC_VF=[
+  VF("La sangre pasa dos veces por el corazón en cada vuelta completa.",true,"Por eso la circulación es doble."),
+  VF("La sangre que sale por la aorta va hacia los pulmones.",false,"Hacia los pulmones va por la <b>arteria pulmonar</b>; la aorta la lleva al resto del cuerpo."),
+  VF("En la sístole auricular se contraen las aurículas.",true,"Así envían la sangre a los ventrículos."),
+  VF("En los capilares del cuerpo la sangre deja oxígeno y recoge dióxido de carbono.",true,"Así llega el oxígeno a las células."),
+  VF("Si se rompe un vaso sanguíneo, la sangre sale de su circuito cerrado.",true,"Entonces actúan las plaquetas para cerrar la herida."),
+];
+
+/* =====================================================================
+   El aparato respiratorio
+   ===================================================================== */
+const RES_OPS=[
+  P("¿Qué forma el aparato respiratorio?","Las vías respiratorias y los pulmones",["El corazón y la sangre","El estómago y el esófago","Los riñones y los uréteres"],"Lo forman las <b>vías respiratorias</b> y los <b>pulmones</b>."),
+  P("¿Cuáles son las vías respiratorias?","Fosas nasales, faringe, laringe, tráquea y bronquios",["Boca, esófago y estómago","Arterias, venas y capilares","Riñones, uréteres y uretra"],"Son las <b>fosas nasales</b>, la <b>faringe</b>, la <b>laringe</b>, la <b>tráquea</b> y los <b>bronquios</b>.",true),
+  P("¿Qué hacen las fosas nasales con el aire?","Lo calientan y lo limpian",["Lo convierten en oxígeno","Lo expulsan","Lo llevan al estómago"],"La fosa nasal <b>calienta y limpia</b> el aire inspirado."),
+  P("¿Qué órgano controla el paso del aire y de los alimentos?","La faringe",["La laringe","La tráquea","El esófago"],"La <b>faringe</b> controla el paso del aire y de los alimentos."),
+  P("¿Dónde están las cuerdas vocales?","En la laringe",["En la faringe","En los bronquios","En los pulmones"],"La <b>laringe</b> contiene las cuerdas vocales."),
+  P("¿Qué órgano comunica con los pulmones?","La tráquea",["El esófago","El diafragma","El corazón"],"La <b>tráquea</b> comunica con los pulmones y se divide en dos bronquios."),
+  P("¿Qué son los bronquios?","Dos tubos que salen de la tráquea y se ramifican en los pulmones",["Los sacos de los pulmones","Músculos entre las costillas","Vasos sanguíneos"],"Los <b>bronquios</b> son dos tubos que parten de la tráquea y se ramifican dentro de los pulmones.",true),
+  P("¿Cuántos lóbulos tiene el pulmón derecho?","Tres",["Dos","Uno","Cuatro"],"El pulmón derecho tiene <b>tres</b> lóbulos y el izquierdo solo <b>dos</b>."),
+  P("¿Dónde tiene lugar el intercambio de gases?","En los alvéolos pulmonares",["En la tráquea","En la laringe","En el diafragma"],"En los <b>alvéolos pulmonares</b>, las pequeñas dilataciones en que terminan los bronquios."),
+  P("¿Cómo se llama el músculo que separa el tórax del abdomen?","El diafragma",["El esfínter","El tabique","El intercostal"],"El <b>diafragma</b> está debajo de los pulmones y separa la cavidad torácica del abdomen."),
+  P("¿Dónde están los músculos intercostales?","Entre las costillas",["Dentro de los pulmones","En el corazón","En el abdomen"],"Los <b>músculos intercostales</b> están entre las costillas."),
+  P("¿Qué le pasa al diafragma cuando inspiramos?","Se contrae y desciende",["Se relaja y sube","No se mueve","Se rompe"],"Al <b>inspirar</b>, el diafragma se contrae y baja, la caja torácica se eleva y entra el aire."),
+  P("¿Cómo se llama la salida del aire de los pulmones?","Espiración",["Inspiración","Ingestión","Excreción"],"En la <b>espiración</b> el diafragma y los intercostales se relajan y los pulmones expulsan el aire."),
+  P("¿Cómo se llama la entrada de aire en los pulmones?","Inspiración",["Espiración","Absorción","Defecación"],"La entrada de aire se produce en la <b>inspiración</b>."),
+  P("¿Cómo son los pulmones?","Dos sacos esponjosos en la caja torácica",["Dos tubos largos","Un músculo plano","Dos glándulas pequeñas"],"Los pulmones son <b>dos sacos muy esponjosos</b> situados en la caja torácica."),
+];
+const RES_VF=[
+  VF("El pulmón izquierdo tiene dos lóbulos.",true,"El derecho tiene tres y el izquierdo dos."),
+  VF("Los movimientos de inspiración y espiración son voluntarios: tenemos que pensar en hacerlos.",false,"El cuerpo los realiza de forma <b>involuntaria</b>."),
+  VF("Cuando espiramos, la cavidad que rodea los pulmones se hace más pequeña.",true,"Por eso los pulmones se encogen y expulsan el aire."),
+  VF("Los pulmones pesan poco porque están llenos de aire.",true,"Son esponjosos: tienen millones de alvéolos llenos de aire."),
+  VF("Al hacer ejercicio respiramos más deprisa.",true,"El cuerpo necesita más oxígeno, así que aumenta el ritmo respiratorio."),
+];
+const RES_MULTI=[
+  M("Toca las <b>vías respiratorias</b>",["fosas nasales","faringe","laringe","tráquea","bronquios"],["esófago","estómago","aorta","uretra"],"Las vías respiratorias son fosas nasales, faringe, laringe, tráquea y bronquios."),
+];
+
+/* =====================================================================
+   El intercambio de gases y la respiración celular
+   ===================================================================== */
+const GAS_OPS=[
+  P("¿Qué gases intervienen en la respiración?","El oxígeno y el dióxido de carbono",["El oxígeno y el nitrógeno","El hidrógeno y el helio","Solo el oxígeno"],"Intervienen el <b>oxígeno</b> (entra) y el <b>dióxido de carbono</b> (sale)."),
+  P("¿Qué gas pasa de los pulmones a la sangre?","El oxígeno",["El dióxido de carbono","El vapor de agua","El nitrógeno"],"El <b>oxígeno</b> pasa de los alvéolos a la sangre de los capilares."),
+  P("¿Qué gas pasa de la sangre a los pulmones para salir al exterior?","El dióxido de carbono",["El oxígeno","La bilis","El plasma"],"El <b>dióxido de carbono</b> pasa de la sangre a los alvéolos y sale por las vías respiratorias."),
+  P("¿Dónde se produce el intercambio de gases con el exterior?","En los alvéolos pulmonares",["En la tráquea","En el corazón","En el estómago"],"Se produce en los <b>alvéolos pulmonares</b>, rodeados de capilares."),
+  P("¿Qué células captan el oxígeno y ceden el dióxido de carbono?","Los glóbulos rojos",["Los glóbulos blancos","Las plaquetas","Las neuronas"],"Los <b>glóbulos rojos</b> de los capilares captan el oxígeno y ceden el dióxido de carbono."),
+  P("¿Cómo es el aire que sale de los pulmones comparado con el que entra?","Más húmedo",["Más seco","Más frío","Con más oxígeno"],"El aire espirado es <b>más húmedo</b> que el que entra."),
+  P("¿Por qué es mejor inspirar por la nariz?","Porque el aire llega más limpio y húmedo a los alvéolos",["Porque entra más deprisa","Porque así no hace falta el diafragma","Porque la boca no tiene aire"],"Por la nariz el aire llega <b>más limpio y húmedo</b>, y eso facilita el intercambio de gases.",true),
+  P("¿Qué es la respiración celular?","Cuando el oxígeno se combina con los nutrientes en las células para producir energía",["El paso del aire por la tráquea","La salida de la orina","El triturado de los alimentos"],"En las células, el oxígeno se combina con los nutrientes y se produce la <b>energía</b> que necesitan. Eso es la <b>respiración celular</b>.",true),
+  P("¿Qué se produce en la respiración celular además de energía?","Dióxido de carbono",["Oxígeno","Glóbulos rojos","Saliva"],"Se produce <b>dióxido de carbono</b>, perjudicial para las células, que la sangre lleva a los pulmones."),
+  P("¿Cómo llega el oxígeno a cada una de las células?","A través de los capilares",["A través de los bronquios","A través del esófago","A través de los uréteres"],"La sangre lo reparte y llega a cada célula a través de los <b>capilares</b>."),
+  P("¿Por qué conviene ventilar las habitaciones cada día?","Para que el aire tenga suficiente oxígeno",["Para que haga más calor","Para que entre polvo","Para respirar más despacio"],"En espacios cerrados baja el oxígeno y respiramos peor; hay que <b>abrir las ventanas</b>."),
+  P("¿Cómo es la sangre que sale de los alvéolos?","Rica en oxígeno",["Rica en dióxido de carbono","Sin glóbulos rojos","Llena de orina"],"Llega pobre en oxígeno y con dióxido de carbono, y sale <b>rica en oxígeno</b>."),
+];
+const GAS_VF=[
+  VF("La sangre que llega a los alvéolos no tiene nada de oxígeno.",false,"Llega <b>pobre</b> en oxígeno, pero no sin él, y con mucho dióxido de carbono."),
+  VF("El dióxido de carbono es un gas perjudicial para las células.",true,"Por eso se expulsa al exterior."),
+  VF("El aire contaminado de las ciudades puede perjudicar la salud.",true,"Afecta sobre todo al aparato respiratorio."),
+  VF("Los pulmones tienen muchos vasos sanguíneos porque allí la sangre toma el oxígeno.",true,"Los alvéolos están rodeados de capilares."),
+];
+
+/* =====================================================================
+   La excreción: riñones y aparato urinario
+   ===================================================================== */
+const EXC_OPS=[
+  P("¿Qué es la excreción?","Eliminar los productos de desecho que producen las células",["Tomar los alimentos","Respirar oxígeno","Bombear la sangre"],"La <b>excreción</b> elimina los desechos producidos por las células."),
+  P("¿Cuáles son los principales órganos excretores?","Los riñones y las glándulas del sudor",["El corazón y las venas","Los pulmones y la tráquea","El estómago y el hígado"],"Los <b>riñones</b> (aparato urinario) y las <b>glándulas del sudor</b>.",true),
+  P("¿Qué órganos forman el aparato urinario?","Riñones, uréteres, vejiga de la orina y uretra",["Boca, esófago y estómago","Corazón, arterias y venas","Tráquea, bronquios y pulmones"],"Lo forman los <b>riñones</b>, los <b>uréteres</b>, la <b>vejiga</b> y la <b>uretra</b>.",true),
+  P("¿Qué forma tienen los riñones?","Parecida a la de una judía",["Redonda como una pelota","De tubo largo","De bolsa"],"Tienen el tamaño de un puño y forma de <b>judía</b>."),
+  P("¿Dónde están los riñones?","Por encima de la cintura, a cada lado de la columna",["En el pecho, junto al corazón","Debajo de la vejiga","En la cabeza"],"Están <b>por encima de la cintura</b>, uno a cada lado de la columna vertebral.",true),
+  P("¿De qué está formada la orina?","De agua y sustancias de desecho",["De sangre y oxígeno","De bilis y saliva","De nutrientes"],"La <b>orina</b> es agua con las sustancias de desecho que llevaba la sangre."),
+  P("¿Qué tubos microscópicos del riñón filtran la sangre?","Los tubos uriníferos",["Los uréteres","Los bronquios","Los capilares pulmonares"],"Los <b>tubos uriníferos</b> ayudan a filtrar la sangre y forman la orina."),
+  P("¿Qué conductos llevan la orina de los riñones a la vejiga?","Los uréteres",["La uretra","Las venas renales","El esófago"],"Los <b>uréteres</b>, uno por cada riñón, terminan en la vejiga."),
+  P("¿Dónde se almacena la orina?","En la vejiga de la orina",["En los riñones","En la uretra","En el estómago"],"La <b>vejiga</b> es un órgano muscular, hueco y elástico donde se almacena la orina."),
+  P("¿Qué músculo impide que la orina salga continuamente de la vejiga?","El esfínter",["El diafragma","El tabique","El intercostal"],"El <b>esfínter</b>, en la parte inferior de la vejiga. Cuando la vejiga se llena, se relaja."),
+  P("¿Por qué conducto sale la orina al exterior?","Por la uretra",["Por los uréteres","Por el ano","Por la tráquea"],"La orina sale por la <b>uretra</b>."),
+  P("¿Por qué vaso entra la sangre en el riñón?","Por la arteria renal",["Por la vena renal","Por la aorta directamente al corazón","Por la vena cava"],"Entra por la <b>arteria renal</b> con desechos y sale limpia por la <b>vena renal</b>."),
+  P("¿Qué es la diálisis?","Una máquina que limpia la sangre cuando los riñones no funcionan",["Una enfermedad del corazón","Un tipo de orina","Una vacuna"],"Con la <b>diálisis</b>, una máquina recibe la sangre, la limpia de desechos y la devuelve.",true),
+  P("¿Cuál es el orden del recorrido de la orina?","Riñón → uréter → vejiga → uretra",["Vejiga → riñón → uretra → uréter","Uretra → vejiga → uréter → riñón","Riñón → uretra → vejiga → uréter"],"La orina se forma en el <b>riñón</b>, baja por el <b>uréter</b>, se guarda en la <b>vejiga</b> y sale por la <b>uretra</b>."),
+];
+const EXC_VF=[
+  VF("La sangre que sale del riñón tiene menos sustancias de desecho que la que entra.",true,"El riñón la filtra: entra con desechos y sale limpia."),
+  VF("Los riñones solo filtran la sangre una vez al día.",false,"Filtran <b>continuamente</b>; lo que se hace de vez en cuando es vaciar la vejiga."),
+  VF("El sudor también elimina sustancias de desecho.",true,"Las glándulas del sudor también son órganos excretores."),
+  VF("Los pacientes de diálisis deben recibir 3 o 4 sesiones cada semana.",true,"La máquina hace el trabajo que no hacen sus riñones."),
+];
+const EXC_MULTI=[
+  M("Toca los órganos del <b>aparato urinario</b>",["riñones","uréteres","vejiga","uretra"],["tráquea","esófago","páncreas","bronquios"],"El aparato urinario: riñones, uréteres, vejiga de la orina y uretra."),
+];
+
+/* =====================================================================
+   Salud: dieta, ejercicio y enfermedades
+   ===================================================================== */
+const SAL_OPS=[
+  P("Según los estudios del libro, ¿qué es más eficaz para prevenir la obesidad?","El ejercicio físico",["Comer menos fruta","Dormir más","Beber refrescos"],"El <b>ejercicio físico</b> es más eficaz que la dieta para prevenir enfermedades como la obesidad."),
+  P("¿A partir de cuántas horas de ejercicio a la semana mejoraban el peso los adolescentes del estudio?","Más de cinco horas",["Una hora","Dos horas","Media hora"],"Los que hacían <b>más de cinco horas</b> semanales mejoraban su peso y su índice de masa corporal."),
+  P("¿Qué genera la escasa actividad física?","Sobrepeso, obesidad y riesgo de hipertensión y colesterol",["Más fuerza","Mejor respiración","Huesos más largos"],"La poca actividad genera <b>sobrepeso, obesidad</b> y riesgo de <b>hipertensión</b> y colesterol alto.",true),
+  P("¿Qué le pasa al corazón cuando hacemos ejercicio?","Late más deprisa",["Se para","Late más despacio","Deja de moverse la sangre"],"Al hacer ejercicio aumenta la <b>frecuencia cardíaca</b> y también el ritmo respiratorio."),
+  P("¿Cómo debe ser una dieta saludable?","Variada, y que aporte la energía necesaria para las actividades del día",["Solo de carne","Solo de dulces","Con muchas grasas animales"],"La dieta debe ser <b>lo más variada posible</b> y aportar la energía necesaria.",true),
+  P("¿Cuál es la comida más importante del día?","El desayuno",["La merienda","La cena","El almuerzo de media mañana"],"El <b>desayuno</b> nos permite realizar las actividades de la mañana."),
+  P("¿Qué es recomendable comer cada día?","Frutas y verduras",["Bollería","Refrescos","Chucherías"],"Es recomendable comer <b>frutas y verduras</b> cada día."),
+  P("¿Qué provoca la obesidad?","Comer demasiados alimentos ricos en grasas animales y azúcares",["Comer mucha fruta","Beber agua","Hacer deporte"],"La <b>obesidad</b> la provoca el consumo exagerado de grasas animales y azúcares.",true),
+  P("¿Qué son la anorexia y la bulimia?","Trastornos psicológicos que alteran la forma de comer",["Infecciones de los pulmones","Enfermedades del riñón","Vitaminas"],"La <b>anorexia</b> y la <b>bulimia</b> son trastornos psicológicos; deben tratarlos psicólogos y psiquiatras.",true),
+  P("¿Cuáles son las intolerancias digestivas más comunes?","A la lactosa y al gluten",["Al agua y a la sal","A la fruta y la verdura","Al oxígeno"],"Las más comunes son las de la <b>lactosa</b> y el <b>gluten</b>."),
+  P("¿Qué es un infarto de miocardio?","La obstrucción de una arteria que rodea el corazón",["Una infección de la garganta","Una piedra en el riñón","Un tipo de alergia"],"Lo provoca la <b>obstrucción de una arteria</b> del corazón; las células sin oxígeno mueren."),
+  P("¿Qué es la arteriosclerosis?","El depósito de grasa en las paredes de los vasos sanguíneos",["Un trastorno de la alimentación","Una enfermedad de los pulmones","Una infección de la orina"],"La <b>arteriosclerosis</b> es el depósito de grasa (como el colesterol) que endurece los vasos.",true),
+  P("¿Qué consejo ayuda a evitar las enfermedades del aparato circulatorio?","No fumar y hacer ejercicio moderado unas tres veces por semana",["Comer muchas grasas animales","No moverse","Tomar mucha sal"],"No fumar, controlar la presión arterial, evitar grasas animales y hacer <b>ejercicio moderado unas tres veces por semana</b>.",true),
+  P("¿Qué enfermedad estrecha y tapona los bronquios?","El asma",["La gripe","La bulimia","Los cálculos renales"],"El <b>asma</b> estrecha y tapona los bronquios; a veces está relacionada con alergias."),
+  P("¿Qué hábitos ayudan al aparato respiratorio?","No fumar, inspirar por la nariz y ventilar",["Respirar por la boca","Estar en sitios cerrados","Fumar poco"],"<b>No fumar</b>, inspirar por la nariz y ventilar los espacios cerrados."),
+  P("¿Qué son los cálculos renales?","Cristales que se forman con las sales minerales de la orina",["Glóbulos blancos","Una infección de garganta","Grasa en las arterias"],"Los <b>cálculos renales</b> son cristales que se forman con sales minerales y pueden impedir el paso de la orina.",true),
+  P("¿Qué dos hábitos ayudan a los riñones?","Beber mucha agua y no tomar demasiada sal",["Comer mucho azúcar y poca agua","Fumar y beber refrescos","No beber nada"],"<b>Beber mucha agua</b> y <b>no consumir demasiada sal</b>."),
+];
+// «Identifica a qué aparato hace referencia cada frase» (Ponte a prueba)
+const APARATOS=["Circulatorio","Respiratorio","Digestivo","Urinario"];
+const SAL_APARATO=[["La presión arterial elevada es un factor de riesgo muy importante.","Circulatorio"],["Las bebidas isotónicas ayudan a recuperar las sales perdidas al sudar.","Urinario"],
+  ["Después de cada comida es muy importante lavarse los dientes.","Digestivo"],["El consumo de tabaco perjudica la salud de las personas cercanas.","Respiratorio"],
+  ["Es recomendable comer frutas y verduras cada día.","Digestivo"],["El ejercicio físico es beneficioso para nuestro corazón.","Circulatorio"],
+  ["Hay que beber mucha agua y no tomar demasiada sal.","Urinario"],["Es importante ventilar las habitaciones cada día.","Respiratorio"]];
+const SAL_OPS2=SAL_APARATO.map(([f,a])=>P(`¿A qué aparato se refiere esta frase?<div class="frase">${f}</div>`,a,APARATOS.filter(x=>x!==a),`Se refiere al aparato <b>${a.toLowerCase()}</b>.`));
+const SAL_VF=[
+  VF("Las enfermedades respiratorias infecciosas, como la gripe, son fáciles de evitar.",false,"Son <b>difíciles</b> de evitar, pero los hábitos saludables ayudan."),
+  VF("Una dieta adecuada ayuda también al resto de sistemas del organismo.",true,"No solo al aparato digestivo."),
+  VF("El tabaco solo perjudica a quien fuma.",false,"También perjudica la salud de las <b>personas cercanas</b>."),
+  VF("La insuficiencia renal ocurre cuando los riñones no filtran bien la sangre.",true,"Los residuos se acumulan en la sangre."),
+];
+
+/* =====================================================================
+   Secciones
+   ===================================================================== */
+const SECS_NAT={ // estrellas: no se usan (van por aciertos), pero el motor las necesita
+  digestivo:{nombre:"Aparato digestivo",estrellas:[60,100],gen:gen(DIG_OPS,DIG_VF,DIG_MULTI)},
+  digestion:{nombre:"La digestión",estrellas:[60,100],gen:gen(DGN_OPS,DGN_VF)},
+  circulatorio:{nombre:"Corazón y sangre",estrellas:[60,100],gen:gen(CIR_OPS,CIR_VF,CIR_MULTI)},
+  circulacion:{nombre:"La circulación",estrellas:[60,100],gen:gen(CIRC_OPS,CIRC_VF)},
+  respiratorio:{nombre:"Aparato respiratorio",estrellas:[60,100],gen:gen(RES_OPS,RES_VF,RES_MULTI)},
+  gases:{nombre:"Intercambio de gases",estrellas:[60,100],gen:gen(GAS_OPS,GAS_VF)},
+  excrecion:{nombre:"La excreción",estrellas:[60,100],gen:gen(EXC_OPS,EXC_VF,EXC_MULTI)},
+  salud:{nombre:"Salud, dieta y ejercicio",estrellas:[60,100],gen:gen([...SAL_OPS,...SAL_OPS2],SAL_VF)},
+};
+
+/* =====================================================================
+   Teoría (resumen del libro)
+   ===================================================================== */
+const TEORIA_NAT={
+  digestivo:`<h3>El aparato digestivo</h3><p>Transforma los alimentos en sustancias que pasan a la sangre (<b>digestión</b>). Lo forman el <b>tubo digestivo</b> y las <b>glándulas digestivas</b>.</p>
+    <h3>Tubo digestivo</h3><p>Boca → faringe → esófago → estómago → intestino delgado (unos 7 m; allí los nutrientes pasan a la sangre) → intestino grueso (más ancho y corto; bacterias que producen vitamina K) → ano.</p>
+    <h3>Glándulas digestivas</h3><p><b>Microscópicas:</b> en las paredes del estómago (jugo gástrico) y del intestino delgado (jugo intestinal).<br><b>Anejas:</b> glándulas salivales (saliva), hígado (bilis) y páncreas (jugo pancreático).</p>`,
+  digestion:`<h3>Las fases</h3><p><b>Ingestión</b> (entrada por la boca) → <b>digestión</b> → <b>absorción</b> (paso a la sangre) → <b>defecación</b> (salida de las heces).</p>
+    <h3>El proceso</h3><p>1. <b>Boca:</b> los dientes mastican, la lengua mezcla y la saliva ablanda y empieza a digerir los glúcidos.<br>2. <b>Estómago:</b> el jugo gástrico (muy ácido) inicia la digestión de las proteínas; se forma el <b>quimo</b>. La comida está unas dos horas.<br>3. <b>Intestino delgado:</b> el quimo se transforma en nutrientes (glúcidos, lípidos y proteínas) que se absorben.<br>4. <b>Intestino grueso:</b> se absorbe gran parte del agua y sales; los restos se eliminan (defecación).</p>
+    <h3>Tipos de digestión</h3><p><b>Mecánica:</b> triturar, desmenuzar y mezclar (dientes, lengua, contracciones). Empieza en la boca y termina en el estómago.<br><b>Química:</b> transformar las moléculas en nutrientes (jugos digestivos). Empieza en la boca y ocurre sobre todo en el estómago y el intestino delgado.</p>`,
+  circulatorio:`<h3>El aparato circulatorio</h3><p>Corazón + vasos sanguíneos + sangre.</p>
+    <h3>El corazón</h3><p>Como un puño, de músculo. Cuatro cavidades: dos <b>aurículas</b> (arriba, llega la sangre de las venas) y dos <b>ventrículos</b> (abajo, sale a las arterias). El <b>tabique</b> lo divide en dos mitades; las <b>válvulas</b> impiden que la sangre retroceda. El lado izquierdo lleva más oxígeno.</p>
+    <h3>Vasos sanguíneos</h3><p><b>Arterias:</b> del corazón a los capilares. <b>Venas:</b> de los capilares al corazón. <b>Capilares:</b> tubos finísimos que llegan a todas las células.</p>
+    <h3>La sangre</h3><p><b>Plasma</b> (líquido con nutrientes), <b>eritrocitos</b> o glóbulos rojos (llevan oxígeno), <b>leucocitos</b> o glóbulos blancos (defensa) y <b>plaquetas</b> (taponan las hemorragias).</p>`,
+  circulacion:`<h3>Doble y cerrada</h3><p><b>Cerrada:</b> la sangre siempre va por los vasos. <b>Doble:</b> pasa dos veces por el corazón.</p>
+    <h3>Circulación pulmonar (circuito menor)</h3><p>Ventrículo derecho → arteria pulmonar → pulmones (deja CO₂, toma oxígeno) → venas pulmonares → aurícula izquierda.</p>
+    <h3>Circulación general (circuito mayor)</h3><p>Aurícula izquierda → ventrículo izquierdo → arteria aorta → capilares (deja oxígeno, recoge CO₂) → venas cavas → aurícula derecha → ventrículo derecho.</p>
+    <h3>El latido</h3><p>Cada contracción es un <b>latido</b> (70-90 por minuto en jóvenes). <b>Sístole auricular:</b> se contraen las aurículas. <b>Sístole ventricular:</b> se contraen los ventrículos. <b>Diástole:</b> el corazón se relaja.</p>`,
+  respiratorio:`<h3>El aparato respiratorio</h3><p><b>Vías respiratorias:</b> fosas nasales (calientan y limpian el aire), faringe (paso de aire y alimentos), laringe (cuerdas vocales), tráquea y bronquios.<br><b>Pulmones:</b> dos sacos esponjosos; el derecho tiene 3 lóbulos y el izquierdo 2. Los bronquios terminan en los <b>alvéolos</b>, donde se intercambian los gases.</p>
+    <h3>Movimientos</h3><p><b>Inspiración:</b> el diafragma se contrae y baja, los intercostales elevan las costillas y entra el aire.<br><b>Espiración:</b> diafragma e intercostales se relajan, la cavidad se hace más pequeña y sale el aire. Son movimientos involuntarios.</p>`,
+  gases:`<h3>Intercambio de gases</h3><p>En los <b>alvéolos</b>, el <b>oxígeno</b> pasa a la sangre de los capilares y el <b>dióxido de carbono</b> pasa de la sangre a los alvéolos y sale. Los <b>glóbulos rojos</b> captan el oxígeno. El aire que sale es más húmedo.</p>
+    <h3>Respiración celular</h3><p>En las células, el oxígeno se combina con los nutrientes y se produce <b>energía</b>. Se forma dióxido de carbono, perjudicial, que la sangre lleva a los pulmones.</p>
+    <p>Respira por la nariz y ventila las habitaciones cada día.</p>`,
+  excrecion:`<h3>La excreción</h3><p>Elimina los desechos de las células. Órganos: los <b>riñones</b> y las <b>glándulas del sudor</b>.</p>
+    <h3>El aparato urinario</h3><p><b>Riñones</b> (como un puño, forma de judía, encima de la cintura): sus <b>tubos uriníferos</b> filtran la sangre y forman la <b>orina</b> (agua + desechos). La sangre entra por la arteria renal y sale limpia por la vena renal.<br>Recorrido: riñón → <b>uréteres</b> → <b>vejiga</b> (la guarda; el <b>esfínter</b> la cierra) → <b>uretra</b> → exterior.</p>
+    <p>Si los riñones no funcionan, la <b>diálisis</b> limpia la sangre con una máquina.</p>`,
+  salud:`<h3>Ejercicio y dieta</h3><p>El ejercicio es más eficaz que la dieta para prevenir la obesidad; con más de 5 h semanales mejora el peso. Al hacer ejercicio suben el ritmo respiratorio y la frecuencia cardíaca. Dieta variada; el <b>desayuno</b> es la comida más importante; frutas y verduras cada día.</p>
+    <h3>Enfermedades y prevención</h3><p><b>Digestivo:</b> anorexia y bulimia (trastornos psicológicos), intolerancias (lactosa, gluten), obesidad (grasas animales y azúcares).<br><b>Circulatorio:</b> infarto, ictus, arteriosclerosis. Prevención: no fumar, controlar la presión arterial, evitar grasas animales, ejercicio moderado 3 veces por semana.<br><b>Respiratorio:</b> faringitis, gripe, neumonía, bronquitis, asma. No fumar, respirar por la nariz, ventilar.<br><b>Urinario:</b> insuficiencia renal, cálculos renales. Beber mucha agua y poca sal.</p>`,
+};
+
+/* =====================================================================
+   Arranque
+   ===================================================================== */
+Quiz.init({secs:SECS_NAT,teoria:TEORIA_NAT,plan:{
+  juego:"naturales",
+  ach:LOGROS.naturales,
+  onFinish:(r)=>{
+    if(r.sec==="circulatorio"&&!r.fallos)unlock("corazon");
+    if(r.sec==="respiratorio"&&!r.fallos)unlock("pulmones");
+    if(r.sec==="salud"&&!r.fallos)unlock("vidasana");
+  },
+}});
+</script>
+</body>
+</html>
