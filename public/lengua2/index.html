@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lengua: el adjetivo, tildes, la h, prefijos y sufijos</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../comun/comun.css">
+<link rel="stylesheet" href="../comun/quiz.css">
+<style>
+/* Estilos propios del plan de lengua: hoja de cuaderno de líneas */
+.mstage{background-image:linear-gradient(transparent 26px,var(--grid) 27px);background-size:100% 28px}
+.palabra{font-family:"Baloo 2",Nunito,sans-serif;font-size:2rem;letter-spacing:1px;display:inline-block;margin-top:4px}
+.hueco{display:inline-block;min-width:.9em;border-bottom:4px solid var(--target);color:var(--target);text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../" aria-label="Volver a los planes de trabajo">‹</a>
+  <h1>Lengua 2</h1>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-view="playview">Jugar</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="rankview">Ranking</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="logview">Logros</button>
+  </div>
+  <button class="who" id="who">👤 <span id="whoTxt">Pon tu nombre</span></button>
+  <button class="icon" id="snd" aria-label="Activar o quitar el sonido">🔊</button>
+</header>
+<main>
+  <section class="view on" id="playview">
+    <div class="bar"><div class="modes" id="modes"></div><button class="btn" id="teoBtn">📖 Teoría</button></div>
+    <div class="playarea">
+    <div class="mstage" id="stage">
+      <div class="qcard" id="qcard">
+        <div class="qhead"><span id="qsec"></span><span class="spacer"></span><span class="streak" id="streak"></span><span id="prog"></span><span class="clock" id="time">0:00</span></div>
+        <div class="qtext" id="qtext"></div>
+        <div id="qans"></div>
+        <div class="qfb" id="qfb" hidden></div>
+      </div>
+    </div>
+    <div class="end" id="end"><div class="card">
+      <div class="stars" id="endStars"></div>
+      <div class="big" id="endBig"></div>
+      <p id="endTxt"></p>
+      <div id="endRank"></div>
+      <div class="row"><button class="btn" id="again">Jugar otra vez</button><button class="btn main" id="retry">Repasar los fallos</button></div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="view page" id="rankview">
+    <div class="page-inner">
+      <div class="cap-top"><h2>Ranking</h2><span class="spacer"></span><button class="btn" id="rkReload">Actualizar</button></div>
+      <div class="bar" style="padding:0 0 14px" id="rkSecs"></div>
+      <div id="rkBody"></div>
+      <p class="note">El ranking es el del 📝 Examen: 10 preguntas de todas las secciones, cada acierto es 1 punto de nota y media estrella; con la misma nota, va primero quien la sacó antes. Las prácticas no entran en el ranking, pero suman minutos jugados y partidas.</p>
+    </div>
+  </section>
+
+  <section class="view page" id="logview">
+    <div class="page-inner">
+      <h2 class="h2">Tus estrellas</h2>
+      <div class="secs" id="lgSecs"></div>
+      <h2 class="h2">Logros <span class="note" id="lgCount"></span></h2>
+      <div class="ach" id="lgAch"></div>
+      <p class="note">Las estrellas y los logros se guardan con tu nombre: si entras desde otro dispositivo o se borran los datos del navegador, se recuperan al poner tu nombre.</p>
+    </div>
+  </section>
+</main>
+<dialog id="teo"><div id="teoBody"></div><div class="drow"><button class="btn main" id="teoClose">Entendido</button></div></dialog>
+
+<script src="../comun/comun.js"></script>
+<script src="../comun/logros.js"></script>
+<script src="../comun/quiz.js"></script>
+<script>
+/* =====================================================================
+   Utilidades
+   ===================================================================== */
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const sample=(arr,k)=>shuffle(arr).slice(0,k);
+const mezcla=(...g)=>shuffle(g.flat());
+const veces=(n,f)=>Array.from({length:n},f);
+const op=(texto,ops,sol,extra={})=>({tipo:"op",texto,ops,ok:0,sol,...extra}); // la primera opción es la correcta
+const letras=(texto,resp,sol)=>({tipo:"letras",texto,resp,sol});
+const Q=s=>`«${s}»`;
+const frase=s=>`<div class="frase">${s}</div>`;
+const hueco=w=>w.replace("_",`<span class="hueco">?</span>`);
+
+/* =====================================================================
+   El adjetivo: encontrar adjetivos en oraciones
+   Cada adjetivo va marcado con [a]
+   ===================================================================== */
+const FRASES_ADJ=[
+  "El perro negro[a] corre por el parque grande[a].",
+  "Mi hermana tiene el pelo largo[a] y rizado[a].",
+  "La casa antigua[a] tiene ventanas enormes[a].",
+  "Comimos una tarta deliciosa[a] en la fiesta.",
+  "El niño simpático[a] ayudó a su compañero nuevo[a].",
+  "Hace un día soleado[a] y caluroso[a].",
+  "Los pájaros pequeños[a] cantan en el árbol alto[a].",
+  "La película fue muy divertida[a].",
+  "Ese libro es más interesante[a] que el otro.",
+  "El mar estaba tranquilo[a] y azul[a].",
+  "Tengo unas zapatillas cómodas[a] y baratas[a].",
+  "La profesora es amable[a] con todos los alumnos.",
+  "Mi abuelo cuenta historias increíbles[a].",
+  "El agua del río está fría[a].",
+  "Las flores rojas[a] y amarillas[a] adornan el jardín.",
+  "El examen fue facilísimo[a].",
+  "Lucía es tan alta[a] como su hermano.",
+  "Un gato blanco[a] duerme en el sofá viejo[a].",
+  "Este invierno ha sido muy lluvioso[a].",
+  "La sopa caliente[a] estaba riquísima[a].",
+];
+const trocear=f=>f.split(" ").map(w=>{const m=w.match(/^(.*?)\[a\](.*)$/);return m?{t:m[1]+m[2],limpio:m[1],adj:true}:{t:w}});
+function qEncontrarAdj(f){
+  const ws=trocear(f),adjs=ws.filter(w=>w.adj).map(w=>w.limpio);
+  return {tipo:"multi",palabras:true,texto:"Toca todos los <b>adjetivos</b> de la oración",items:ws.map(w=>w.t),ok:ws.map((w,i)=>w.adj?i:-1).filter(i=>i>=0),
+    nota:"Los adjetivos dicen cómo es el sustantivo: una cualidad o un estado.",
+    sol:`Los adjetivos son: <b>${adjs.join(", ")}</b>. ${/muy|más|tan/.test(f)?"Ojo: «muy», «más» y «tan» no son adjetivos, acompañan al adjetivo.":""}`};
+}
+const DEF_ADJ=[
+  ()=>op("¿Qué es un adjetivo?",["Una palabra que expresa una cualidad o un estado del sustantivo","Una palabra que expresa una acción","Una palabra que sustituye al sustantivo","Una palabra que une oraciones"],"El <b>adjetivo</b> dice cómo es o cómo está el sustantivo: perro <i>negro</i>, agua <i>fría</i>.",{one:true}),
+  ()=>op("¿Con qué concuerda el adjetivo?",["Con el sustantivo, en género y número","Con el verbo, en tiempo","Con el artículo, en tiempo","Con nada"],"El adjetivo concuerda con el sustantivo en <b>género y número</b>: casa antigu<b>a</b>, casas antigu<b>as</b>.",{one:true}),
+  ()=>{const [b,m]=pick([["perros pequeño","perros pequeños"],["flores rojo","flores rojas"],["la mesa redondo","la mesa redonda"],["los niños simpática","los niños simpáticos"]]);
+    return op(`¿Cuál está bien escrito?`,[m,b],`El adjetivo concuerda con el sustantivo en género y número: <b>${m}</b>.`)},
+];
+const genEncontrar=()=>mezcla(sample(FRASES_ADJ,8).map(qEncontrarAdj),sample(DEF_ADJ,2).map(f=>f()));
+
+/* =====================================================================
+   Grados del adjetivo
+   ===================================================================== */
+const GRADO_EXPLICA={
+  "Positivo":"<b>Positivo:</b> expresa la cualidad sin comparar ni intensificar (es alto).",
+  "Comparativo":"<b>Comparativo:</b> compara la cualidad entre dos (más alto que, tan alto como, menos alto que).",
+  "Superlativo":"<b>Superlativo:</b> expresa la cualidad en el grado más alto (altísimo, muy alto, el más alto de).",
+};
+// [frase con el adjetivo entre * *, grado, subtipo]
+const GRADOS=[
+  ["La casa es *grande*.","Positivo"],["El mar está *tranquilo*.","Positivo"],["Tengo un gato *blanco*.","Positivo"],["La película es *divertida*.","Positivo"],
+  ["Mi perro es más *rápido* que el tuyo.","Comparativo","de superioridad"],["Este libro es menos *interesante* que aquel.","Comparativo","de inferioridad"],
+  ["Lucía es tan *alta* como su hermano.","Comparativo","de igualdad"],["El río es más *largo* que el arroyo.","Comparativo","de superioridad"],
+  ["Mi mochila es tan *pesada* como la tuya.","Comparativo","de igualdad"],["Hoy hace menos *frío* que ayer.","Comparativo","de inferioridad"],
+  ["El examen fue *facilísimo*.","Superlativo","absoluto"],["La sopa está muy *caliente*.","Superlativo","absoluto"],
+  ["Es el más *alto* de la clase.","Superlativo","relativo"],["La tarta estaba *riquísima*.","Superlativo","absoluto"],["Es la montaña más *alta* del mundo.","Superlativo","relativo"],
+];
+const marcaAdj=f=>f.replace(/\*(.+?)\*/,"<mark>$1</mark>");
+const qGrado=([f,g,sub])=>op(`¿En qué grado está el adjetivo marcado?${frase(marcaAdj(f))}`,[g,...["Positivo","Comparativo","Superlativo"].filter(x=>x!==g)],GRADO_EXPLICA[g]+(sub?` Aquí: ${g.toLowerCase()} <b>${sub}</b>.`:""),{fijo:true,orden:["Positivo","Comparativo","Superlativo"]});
+const qSubtipo=()=>{const [f,g,sub]=pick(GRADOS.filter(x=>x[1]==="Comparativo"));const ops=["de superioridad","de igualdad","de inferioridad"];
+  return op(`¿Qué tipo de comparativo es?${frase(marcaAdj(f))}`,[sub,...ops.filter(x=>x!==sub)],`<b>más … que</b> = superioridad; <b>tan … como</b> = igualdad; <b>menos … que</b> = inferioridad.`,{fijo:true,orden:ops})};
+// Superlativo absoluto en -ísimo (con los cambios de letra)
+const SUPER=[["alto","altísimo"],["fácil","facilísimo"],["rápido","rapidísimo"],["amable","amabilísimo"],["rico","riquísimo"],["feliz","felicísimo"],["largo","larguísimo"],["guapo","guapísimo"],["limpio","limpísimo"],["grande","grandísimo"]];
+const qSuperlativo=([a,s])=>letras(`Escribe el superlativo de ${Q(a)} terminado en -ísimo`,s,`<b>${a} → ${s}</b>.${a==="rico"?" La c cambia a qu.":a==="feliz"?" La z cambia a c.":a==="largo"?" Se añade u para que suene igual.":""}`);
+const IRREG=[["bueno","mejor"],["malo","peor"],["grande","mayor"],["pequeño","menor"]];
+const qComparativoIrreg=()=>{const [a,c]=pick(IRREG);return op(`¿Cuál es el comparativo de superioridad de ${Q(a)} sin usar «más»?`,[c,...IRREG.map(x=>x[1]).filter(x=>x!==c)],`<b>${a} → ${c}</b> (más ${a} = ${c}).`)};
+const genGrados=()=>mezcla(sample(GRADOS,5).map(qGrado),[qSubtipo(),qComparativoIrreg()],sample(SUPER,3).map(qSuperlativo));
+
+/* =====================================================================
+   Acentuación de diptongos e hiatos
+   ===================================================================== */
+const RAZON={
+  aguda:"Es <b>aguda</b> terminada en n, s o vocal.",
+  llana:"Es <b>llana</b> y no termina en n, s ni vocal.",
+  esdrujula:"Es <b>esdrújula</b>: todas llevan tilde.",
+  hiato:"Tiene un <b>hiato con vocal cerrada tónica</b> (í, ú): siempre lleva tilde, aunque no lo pidan las reglas generales.",
+  no:"No lleva tilde: sigue las reglas generales.",
+};
+// [palabra bien escrita, razón, tipo de encuentro, formas mal escritas]
+const PALABRAS_T=[
+  ["camión","aguda","diptongo",["camion","cámion"]],["después","aguda","diptongo",["despues","déspues"]],["murciélago","esdrujula","diptongo",["murcielago","murcíelago"]],
+  ["náutico","esdrujula","diptongo",["nautico","naútico"]],["huésped","llana","diptongo",["huesped","huespéd"]],["cuídate","esdrujula","diptongo",["cuidate","cúidate"]],
+  ["acción","aguda","diptongo",["accion","accíon"]],["peine","no","diptongo",["péine","peiné"]],["ciudad","no","diptongo",["ciudád","cíudad"]],["cielo","no","diptongo",["cíelo","ciélo"]],
+  ["país","hiato","hiato",["pais","páis"]],["río","hiato","hiato",["rio"]],["búho","hiato","hiato",["buho","buhó"]],["maíz","hiato","hiato",["maiz","máiz"]],
+  ["oír","hiato","hiato",["oir","óir"]],["día","hiato","hiato",["dia","diá"]],["baúl","hiato","hiato",["baul","bául"]],["ataúd","hiato","hiato",["ataud","átaud"]],
+  ["grúa","hiato","hiato",["grua","gruá"]],["león","aguda","hiato",["leon","léon"]],["héroe","esdrujula","hiato",["heroe","heróe"]],["océano","esdrujula","hiato",["oceano","oceáno"]],
+  ["poeta","no","hiato",["póeta","poéta"]],["museo","no","hiato",["múseo","muséo"]],["canoa","no","hiato",["cánoa","canóa"]],
+];
+const qBienAcentuada=([w,r,,mal])=>op("¿Cuál está bien escrita?",[w,...mal],`Se escribe <b>${w}</b>. ${RAZON[r]}`);
+const qPorQueTilde=([w,r])=>op(`¿Por qué ${r==="no"?"no lleva tilde":"lleva tilde"} ${Q(w)}?`,[RAZON[r],...sample(Object.keys(RAZON).filter(k=>k!==r),3).map(k=>RAZON[k])],RAZON[r],{one:true});
+const qDipHiato=([w,,t])=>op(`En ${Q(w)}, las vocales juntas forman…`,[t==="diptongo"?"Diptongo":"Hiato",t==="diptongo"?"Hiato":"Diptongo"],t==="diptongo"?"<b>Diptongo:</b> las dos vocales van en la misma sílaba.":"<b>Hiato:</b> las dos vocales van en sílabas distintas.",{fijo:true,orden:["Diptongo","Hiato"]});
+const TEO_T=[
+  ()=>op("Los diptongos, ¿qué reglas de acentuación siguen?",["Las reglas generales (agudas, llanas y esdrújulas)","Llevan siempre tilde","No llevan nunca tilde","Solo llevan tilde si son llanas"],"Los <b>diptongos</b> siguen las reglas generales: camión (aguda en n), huésped (llana en d), murciélago (esdrújula).",{one:true}),
+  ()=>op("En un diptongo de vocal abierta y cerrada, ¿dónde va la tilde?",["Sobre la vocal abierta","Sobre la vocal cerrada","Sobre las dos","En ninguna"],"La tilde va sobre la <b>vocal abierta</b>: cami<b>ó</b>n, despu<b>é</b>s.",{one:true}),
+  ()=>op("¿Cuándo lleva tilde siempre un hiato?",["Cuando la vocal cerrada (i, u) es la tónica","Cuando las dos vocales son abiertas","Nunca","Cuando es una palabra llana"],"El hiato con <b>vocal cerrada tónica</b> lleva siempre tilde: pa<b>í</b>s, r<b>í</b>o, b<b>ú</b>ho.",{one:true}),
+  ()=>op("Un hiato de dos vocales abiertas, ¿cómo se acentúa?",["Según las reglas generales","Siempre con tilde","Nunca con tilde","Con tilde en la segunda vocal"],"Dos abiertas siguen las reglas generales: le<b>ó</b>n (aguda en n), poeta (llana en vocal, sin tilde).",{one:true}),
+];
+const genAcentuacion=()=>{const ps=shuffle(PALABRAS_T);return mezcla(ps.slice(0,4).map(qBienAcentuada),ps.slice(4,7).map(qPorQueTilde),[qDipHiato(ps[7])],sample(TEO_T,2).map(f=>f()))};
+
+/* =====================================================================
+   La letra h
+   ===================================================================== */
+const REGLA_H={
+  hie:"Se escriben con h las palabras que empiezan por <b>hie-, hue-, hui-</b>: hielo, huevo, huir.",
+  hum:"Se escriben con h las palabras que empiezan por <b>hum-</b> + vocal: humo, humano, humedad.",
+  pref:"Se escriben con h las que empiezan por <b>hidr-, hiper-, hipo-, hexa-, hepta-</b>: hidratar, hipopótamo, hexágono.",
+  hosp:"Se escriben con h las que empiezan por <b>hosp-, horm-, horr-</b>: hospital, hormiga, horror.",
+  verbo:"Se escriben con h todas las formas de los verbos <b>haber, hacer, hablar, hallar y habitar</b>: había, hizo, habló.",
+  deriv:"Las palabras <b>derivadas</b> de otras con h también la llevan: deshacer (hacer), deshielo (hielo).",
+  sin:"Esta palabra <b>no</b> lleva h.",
+};
+// [palabra con _ donde iría la h, ¿lleva h?, regla]
+const PAL_H=[
+  ["_ielo",1,"hie"],["_ierba",1,"hie"],["_iena",1,"hie"],["_ierro",1,"hie"],["_uevo",1,"hie"],["_ueso",1,"hie"],["_uerto",1,"hie"],["_uella",1,"hie"],["_uir",1,"hie"],
+  ["_umo",1,"hum"],["_umano",1,"hum"],["_umedad",1,"hum"],["_umilde",1,"hum"],["_umor",1,"hum"],
+  ["_idratar",1,"pref"],["_ipermercado",1,"pref"],["_ipopótamo",1,"pref"],["_exágono",1,"pref"],["_eptágono",1,"pref"],
+  ["_ospital",1,"hosp"],["_ormiga",1,"hosp"],["_orror",1,"hosp"],["_orrible",1,"hosp"],
+  ["_abía",1,"verbo"],["_izo",1,"verbo"],["_ablaron",1,"verbo"],["_abitación",1,"verbo"],["_allé",1,"verbo"],
+  ["des_acer",1,"deriv"],["re_acer",1,"deriv"],["des_ielo",1,"deriv"],
+  ["_oso",0,"sin"],["_árbol",0,"sin"],["_ojo",0,"sin"],["_uva",0,"sin"],["_oreja",0,"sin"],["_ermita",0,"sin"],["_orfanato",0,"sin"],["_óseo",0,"sin"],["_oval",0,"sin"],
+];
+const escrita=(w,h)=>w.replace("_",h?"h":"");
+const qConH=([w,h,r])=>op(`¿Con h o sin h? <span class="palabra">${hueco(w)}</span>`,h?["Con h","Sin h"]:["Sin h","Con h"],`Se escribe <b>${escrita(w,h)}</b>. ${REGLA_H[r]}${["_orfanato","_óseo","_oval"].includes(w)?" Aunque huérfano, hueso y huevo llevan h (por empezar por hue-), sus parientes orfanato, óseo y oval no.":""}`,{fijo:true,orden:["Con h","Sin h"]});
+const qPorQueH=()=>{const [w,,r]=pick(PAL_H.filter(x=>x[1]));return op(`¿Por qué ${Q(escrita(w,1))} se escribe con h?`,[REGLA_H[r],...sample(Object.keys(REGLA_H).filter(k=>k!==r&&k!=="sin"),3).map(k=>REGLA_H[k])],REGLA_H[r],{one:true})};
+const qHBien=()=>{const [w,h,r]=pick(PAL_H),bien=escrita(w,h),mal=escrita(w,!h);return op("¿Cuál está bien escrita?",[bien,mal],`Se escribe <b>${bien}</b>. ${REGLA_H[r]}`)};
+const genH=()=>{const ps=shuffle(PAL_H);return mezcla(ps.slice(0,6).map(qConH),[qPorQueH(),qPorQueH(),qHBien(),qHBien()])};
+
+/* =====================================================================
+   Palabras primitivas y derivadas
+   ===================================================================== */
+// [primitiva, derivadas, intrusas que se parecen pero no son de la familia]
+const FAMILIAS=[
+  ["pan",["panadero","panadería","panecillo","empanada"],["pantalón","pantera","paño"]],
+  ["flor",["florero","floristería","florecer","floral"],["flotador","flotar","flojo"]],
+  ["mar",["marinero","marino","marea","submarino"],["mármol","marchar","marco"]],
+  ["zapato",["zapatero","zapatería","zapatilla"],["zanahoria","zarpa","zafiro"]],
+  ["libro",["librería","librero","libreta"],["libre","libertad","libra"]],
+  ["papel",["papelera","papelería","papeleo"],["papaya","papá"]],
+  ["jardín",["jardinero","jardinería"],["jarabe","jarra"]],
+  ["leche",["lechero","lechería"],["lechuza","lecho"]],
+  ["fruta",["frutero","frutería","frutal"],["frustrar","fruncir"]],
+  ["casa",["caserón","casita","caseta"],["casco","castaña"]],
+];
+const qPrimitiva=([p,ds])=>{const d=pick(ds),otras=sample(FAMILIAS.filter(f=>f[0]!==p).map(f=>f[0]),3);
+  return op(`¿Cuál es la palabra <b>primitiva</b> de ${Q(d)}?`,[p,...otras],`<b>${d}</b> viene de <b>${p}</b>: ${p} es la primitiva y ${d}, una derivada.`)};
+const qEsPrimitiva=()=>{const f=pick(FAMILIAS),prim=Math.random()<.5,w=prim?f[0]:pick(f[1]);
+  return op(`${Q(w)} es una palabra…`,prim?["Primitiva","Derivada"]:["Derivada","Primitiva"],prim?`<b>Primitiva:</b> no viene de otra palabra; de ella salen otras (${f[1].slice(0,2).join(", ")}).`:`<b>Derivada:</b> se forma a partir de ${Q(f[0])}.`,{fijo:true,orden:["Primitiva","Derivada"]})};
+const qFamilia=([p,ds,falsas])=>{const ok=sample(ds,Math.min(3,ds.length)),items=shuffle([...ok,...falsas]);
+  return {tipo:"multi",palabras:true,texto:`Toca las palabras de la familia de ${Q(p)}`,items,ok:items.map((x,i)=>ok.includes(x)?i:-1).filter(i=>i>=0),
+    sol:`De la familia de <b>${p}</b>: ${ok.join(", ")}. ${falsas.join(", ")} se parecen, pero no tienen nada que ver con ${Q(p)}.`}};
+const DEF_PD=[
+  ()=>op("¿Qué es una palabra primitiva?",["La que no se forma a partir de otra palabra","La que lleva prefijo","La que lleva sufijo","Una palabra antigua"],"Una palabra <b>primitiva</b> no viene de otra: pan, flor, mar.",{one:true}),
+  ()=>op("¿Qué es una palabra derivada?",["La que se forma a partir de una primitiva, añadiendo prefijos o sufijos","La que no tiene lexema","La que tiene una sola sílaba","La que no lleva tilde"],"Una <b>derivada</b> se forma desde una primitiva con prefijos o sufijos: pan → panadero.",{one:true}),
+  ()=>op("¿Qué es el lexema?",["La parte de la palabra que lleva el significado","La terminación de la palabra","El prefijo","La tilde"],"El <b>lexema</b> es la parte que lleva el significado y comparten las palabras de la familia: <b>pan</b>adero, <b>pan</b>adería.",{one:true}),
+  ()=>op("¿Qué es una familia de palabras?",["Palabras que comparten el mismo lexema","Palabras que riman","Palabras que empiezan igual","Sinónimos"],"Las palabras de una <b>familia</b> comparten el lexema: flor, florero, floristería.",{one:true}),
+];
+const genDerivadas=()=>{const fs=shuffle(FAMILIAS);return mezcla(fs.slice(0,4).map(qPrimitiva),[qEsPrimitiva(),qEsPrimitiva()],fs.slice(4,6).map(qFamilia),sample(DEF_PD,2).map(f=>f()))};
+
+/* =====================================================================
+   Prefijos
+   ===================================================================== */
+// [prefijo, significado, ejemplo, base del ejemplo]
+const PREF=[["des-","negación o lo contrario","deshacer","hacer"],["in-, im-, i-","negación (no)","imposible","posible"],["re-","repetición (otra vez)","releer","leer"],
+  ["pre-","antes","prehistoria","historia"],["sub-","debajo","subterráneo","terráneo"],["super-","encima o muy","supermercado","mercado"],["anti-","contra","antiarrugas","arrugas"],
+  ["bi-","dos","bicicleta","ciclo"],["tri-","tres","triciclo","ciclo"],["semi-","medio","semicírculo","círculo"],["co-, con-","con, junto","compañero","pañero"],
+  ["multi-","muchos","multicolor","color"],["inter-","entre","internacional","nacional"],["extra-","fuera de, o muy","extraordinario","ordinario"],["mono-","uno","monopatín","patín"],
+  ["auto-","uno mismo","autorretrato","retrato"],["pos-, post-","después","posguerra","guerra"],["ex-","que fue, o fuera","exalumno","alumno"]];
+const PREF_SIMPLES=PREF.filter(p=>!["sub-","co-, con-"].includes(p[0]));
+const qPrefSignif=([p,s,e])=>op(`¿Qué significa el prefijo <b>${p}</b> en ${Q(e)}?`,[s,...sample(PREF.filter(x=>x[1]!==s).map(x=>x[1]),3)],`<b>${p}</b> significa «${s}»: ${e}.`);
+const qPrefCual=([p,s,e])=>op(`¿Qué palabra tiene un prefijo que significa «${s}»?`,[e,...sample(PREF.filter(x=>x[1]!==s).map(x=>x[2]),3)],`<b>${e}</b> lleva el prefijo <b>${p}</b> («${s}»).`);
+const DEF_PREF=[
+  ()=>op("¿Qué es un prefijo?",["Una partícula que va delante del lexema y cambia su significado","Una partícula que va detrás del lexema","Una palabra que acompaña al sustantivo","Una letra que no se pronuncia"],"El <b>prefijo</b> va <b>delante</b> del lexema: <b>re</b>leer, <b>des</b>hacer.",{one:true}),
+  ()=>{const [b,c,d]=pick([["hacer","deshacer","des-"],["leer","releer","re-"],["posible","imposible","im-"],["ver","prever","pre-"],["color","multicolor","multi-"]]);
+    return op(`¿Qué prefijo se ha añadido a ${Q(b)} para formar ${Q(c)}?`,[d,...sample(["des-","re-","im-","pre-","multi-","anti-"].filter(x=>x!==d),3)],`${c} = <b>${d}</b> + ${b}.`)},
+];
+const genPrefijos=()=>{const ps=shuffle(PREF_SIMPLES);return mezcla(ps.slice(0,5).map(qPrefSignif),ps.slice(5,8).map(qPrefCual),DEF_PREF.map(f=>f()))};
+
+/* =====================================================================
+   Sufijos
+   ===================================================================== */
+const SUF=[["-ero, -era","oficio o recipiente","panadero, frutero"],["-ería","tienda o lugar donde se vende","panadería, frutería"],["-ito, -ita, -illo","diminutivo (pequeño)","perrito, casita"],
+  ["-ón, -ona, -azo","aumentativo (grande)","caserón, perrazo"],["-oso, -osa","que tiene","miedoso, sabrosa"],["-ble","que se puede","comestible, lavable"],
+  ["-dor, -dora","que hace la acción","trabajador, lavadora"],["-ista","profesión o afición","dentista, futbolista"],["-al, -eda","conjunto de plantas","manzanal, arboleda"],
+  ["-eza, -ez","cualidad","belleza, vejez"],["-mente","forma adverbios (de manera…)","rápidamente, tranquilamente"]];
+const qSufSignif=([s,m,e])=>{const ej=e.split(", ")[0];return op(`¿Qué indica el sufijo <b>${s.split(", ")[0]}</b> en ${Q(ej)}?`,[m,...sample(SUF.filter(x=>x[1]!==m).map(x=>x[1]),3)],`<b>${s}</b>: ${m} (${e}).`)};
+const PALABRA_SUF=[["Tienda donde se venden zapatos","zapatería",["zapatero","zapatilla","zapatón"]],["Persona que trabaja con el pan","panadero",["panadería","panecillo","panera"]],
+  ["Que se puede comer","comestible",["comedor","comida","comilón"]],["Perro pequeño","perrito",["perrazo","perrera","perruno"]],["Que tiene miedo","miedoso",["miedito","miedica","temor"]],
+  ["Persona que arregla los dientes","dentista",["dentadura","dental","dentón"]],["Conjunto de manzanos","manzanal",["manzanilla","manzanero","manzana"]],["Cualidad de ser bello","belleza",["bellamente","bellísimo","embellecer"]],
+  ["Máquina que lava","lavadora",["lavable","lavabo","lavado"]],["De forma tranquila","tranquilamente",["tranquilidad","tranquilo","tranquilizar"]]];
+const qSufPalabra=([d,ok,mal])=>op(`¿Qué palabra significa «${d.toLowerCase()}»?`,[ok,...mal],`<b>${ok}</b>.`);
+const DEF_SUF=[
+  ()=>op("¿Qué es un sufijo?",["Una partícula que va detrás del lexema y forma una palabra nueva","Una partícula que va delante del lexema","Una palabra sin significado","Un tipo de adjetivo"],"El <b>sufijo</b> va <b>detrás</b> del lexema: pan<b>adero</b>, perr<b>ito</b>.",{one:true}),
+  ()=>op("¿Qué sufijos son diminutivos?",["-ito, -illo, -ico","-ón, -azo, -ote","-ero, -ería","-mente"],"Los <b>diminutivos</b> indican pequeño o cariño: perr<b>ito</b>, cas<b>illa</b>.",{one:true}),
+];
+const genSufijos=()=>mezcla(sample(SUF,5).map(qSufSignif),sample(PALABRA_SUF,3).map(qSufPalabra),DEF_SUF.map(f=>f()));
+
+/* =====================================================================
+   Secciones
+   ===================================================================== */
+const SECS_L2={ // estrellas: no se usan (van por aciertos), pero el motor las necesita
+  adjetivos:{nombre:"Encontrar adjetivos",estrellas:[60,100],gen:genEncontrar},
+  grados:{nombre:"Grados del adjetivo",estrellas:[60,100],gen:genGrados},
+  acentuacion:{nombre:"Tildes: diptongos e hiatos",estrellas:[60,100],gen:genAcentuacion},
+  letra_h:{nombre:"La letra h",estrellas:[60,100],gen:genH},
+  derivadas:{nombre:"Primitivas y derivadas",estrellas:[60,100],gen:genDerivadas},
+  prefijos:{nombre:"Prefijos",estrellas:[60,100],gen:genPrefijos},
+  sufijos:{nombre:"Sufijos",estrellas:[60,100],gen:genSufijos},
+};
+
+/* =====================================================================
+   Teoría
+   ===================================================================== */
+const TEORIA_L2={
+  adjetivos:`<h3>El adjetivo</h3><p>Expresa una <b>cualidad</b> o un <b>estado</b> del sustantivo: perro <i>negro</i>, agua <i>fría</i>. Concuerda con él en género y número: casa antigu<b>a</b>, casas antigu<b>as</b>.</p><p>Truco: pregunta «¿cómo es?» o «¿cómo está?» al sustantivo. Palabras como <b>muy, más, tan</b> no son adjetivos: acompañan al adjetivo.</p>`,
+  grados:`<h3>Grados del adjetivo</h3><p><b>Positivo:</b> la cualidad sin más (alto).<br><b>Comparativo:</b> de superioridad (más alto que), de igualdad (tan alto como) y de inferioridad (menos alto que).<br><b>Superlativo:</b> absoluto (altísimo, muy alto) y relativo (el más alto de).</p>
+    <p>Comparativos especiales: bueno → <b>mejor</b>, malo → <b>peor</b>, grande → <b>mayor</b>, pequeño → <b>menor</b>.<br>Superlativos con cambio: rico → ri<b>qu</b>ísimo, feliz → feli<b>c</b>ísimo, largo → lar<b>gu</b>ísimo.</p>`,
+  acentuacion:`<h3>Reglas generales</h3><p><b>Agudas:</b> tilde si acaban en n, s o vocal. <b>Llanas:</b> tilde si NO acaban en n, s o vocal. <b>Esdrújulas:</b> siempre.</p>
+    <h3>Diptongos</h3><p>Siguen las reglas generales. La tilde va en la vocal abierta (cami<b>ó</b>n, despu<b>é</b>s); con dos cerradas, en la segunda (cu<b>í</b>date).</p>
+    <h3>Hiatos</h3><p><b>Dos vocales abiertas:</b> reglas generales (le<b>ó</b>n, poeta, h<b>é</b>roe).<br><b>Vocal cerrada tónica + abierta:</b> la cerrada lleva <b>siempre</b> tilde (pa<b>í</b>s, r<b>í</b>o, b<b>ú</b>ho, ma<b>í</b>z, ata<b>ú</b>d).</p>`,
+  letra_h:`<h3>Se escriben con h</h3><p>1. Las que empiezan por <b>hie-, hue-, hui-</b>: hielo, huevo, huir.<br>2. Las que empiezan por <b>hum-</b> + vocal: humo, humano.<br>3. Las que empiezan por <b>hidr-, hiper-, hipo-, hexa-, hepta-</b>: hidratar, hipopótamo, hexágono.<br>4. Las que empiezan por <b>hosp-, horm-, horr-</b>: hospital, hormiga, horror.<br>5. Las formas de <b>haber, hacer, hablar, hallar, habitar</b>: había, hizo.<br>6. Las <b>derivadas</b> de palabras con h: deshacer, deshielo.</p>
+    <p>¡Ojo! huevo → <b>o</b>val, hueso → <b>ó</b>seo, huérfano → <b>o</b>rfanato: sin h.</p>`,
+  derivadas:`<h3>Primitivas y derivadas</h3><p>Una palabra <b>primitiva</b> no viene de otra (pan). Las <b>derivadas</b> se forman a partir de ella con prefijos o sufijos (panadero, panadería, empanada).</p><p>El <b>lexema</b> es la parte con el significado; las palabras que lo comparten forman una <b>familia de palabras</b>. Cuidado con las que se parecen sin ser familia: pan ≠ pantalón.</p>`,
+  prefijos:`<h3>Prefijos (delante del lexema)</h3><table>${PREF.map(p=>`<tr><td><b>${p[0]}</b></td><td>${p[1]}</td><td>${p[2]}</td></tr>`).join("")}</table>`,
+  sufijos:`<h3>Sufijos (detrás del lexema)</h3><table>${SUF.map(s=>`<tr><td><b>${s[0]}</b></td><td>${s[1]}</td><td>${s[2]}</td></tr>`).join("")}</table>`,
+};
+
+/* =====================================================================
+   Arranque
+   ===================================================================== */
+Quiz.init({secs:SECS_L2,teoria:TEORIA_L2,plan:{
+  juego:"lengua2",
+  ach:LOGROS.lengua2,
+  onFinish:(r)=>{
+    if(r.sec==="adjetivos"&&!r.fallos)unlock("adjetivos");
+    if(r.sec==="acentuacion"&&!r.fallos)unlock("tildes");
+    if(r.sec==="letra_h"&&!r.fallos)unlock("hache");
+  },
+}});
+</script>
+</body>
+</html>

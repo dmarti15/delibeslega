@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Matemáticas: fracciones</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍕</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../comun/comun.css">
+<link rel="stylesheet" href="../comun/quiz.css">
+<style>
+/* Estilos propios de Fracciones: fracciones en vertical, números mixtos y dibujos */
+.fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.05;margin:0 .12em;font-variant-numeric:tabular-nums}
+.fr>b{border-bottom:.09em solid currentColor;padding:0 .2em;font-weight:inherit}
+.fr>i{font-style:normal;padding:0 .2em}
+.mx{vertical-align:middle;margin-right:.05em}
+.qtext .grande{display:block;font-size:2rem;text-align:center;margin:8px 0 2px}
+.qtext .grande .hueco,.fr .hueco{display:inline-block;min-width:1.1em;border-bottom:4px solid var(--target);color:var(--target)}
+.dib{max-width:100%;height:auto}
+.opt .fr{font-size:1.2rem}
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../" aria-label="Volver a los planes de trabajo">‹</a>
+  <h1>Fracciones</h1>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-view="playview">Jugar</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="rankview">Ranking</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="logview">Logros</button>
+  </div>
+  <button class="who" id="who">👤 <span id="whoTxt">Pon tu nombre</span></button>
+  <button class="icon" id="snd" aria-label="Activar o quitar el sonido">🔊</button>
+</header>
+<main>
+  <section class="view on" id="playview">
+    <div class="bar"><div class="modes" id="modes"></div><button class="btn" id="teoBtn">📖 Teoría</button></div>
+    <div class="playarea">
+    <div class="mstage" id="stage">
+      <div class="qcard" id="qcard">
+        <div class="qhead"><span id="qsec"></span><span class="spacer"></span><span class="streak" id="streak"></span><span id="prog"></span><span class="clock" id="time">0:00</span></div>
+        <div class="qtext" id="qtext"></div>
+        <div id="qans"></div>
+        <div class="qfb" id="qfb" hidden></div>
+      </div>
+    </div>
+    <div class="end" id="end"><div class="card">
+      <div class="stars" id="endStars"></div>
+      <div class="big" id="endBig"></div>
+      <p id="endTxt"></p>
+      <div id="endRank"></div>
+      <div class="row"><button class="btn" id="again">Jugar otra vez</button><button class="btn main" id="retry">Repasar los fallos</button></div>
+    </div></div>
+    </div>
+  </section>
+
+  <section class="view page" id="rankview">
+    <div class="page-inner">
+      <div class="cap-top"><h2>Ranking</h2><span class="spacer"></span><button class="btn" id="rkReload">Actualizar</button></div>
+      <div class="bar" style="padding:0 0 14px" id="rkSecs"></div>
+      <div id="rkBody"></div>
+      <p class="note">El ranking es el del 📝 Examen: 10 preguntas de todas las secciones, cada acierto es 1 punto de nota y media estrella; con la misma nota, va primero quien la sacó antes. Las prácticas no entran en el ranking, pero suman minutos jugados y partidas.</p>
+    </div>
+  </section>
+
+  <section class="view page" id="logview">
+    <div class="page-inner">
+      <h2 class="h2">Tus estrellas</h2>
+      <div class="secs" id="lgSecs"></div>
+      <h2 class="h2">Logros <span class="note" id="lgCount"></span></h2>
+      <div class="ach" id="lgAch"></div>
+      <p class="note">Las estrellas y los logros se guardan con tu nombre: si entras desde otro dispositivo o se borran los datos del navegador, se recuperan al poner tu nombre.</p>
+    </div>
+  </section>
+</main>
+<dialog id="teo"><div id="teoBody"></div><div class="drow"><button class="btn main" id="teoClose">Entendido</button></div></dialog>
+
+<script src="../comun/comun.js"></script>
+<script src="../comun/logros.js"></script>
+<script src="../comun/quiz.js"></script>
+<script>
+/* =====================================================================
+   Utilidades
+   ===================================================================== */
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const sample=(arr,k)=>shuffle(arr).slice(0,k);
+const mezcla=(...g)=>shuffle(g.flat());
+const veces=(n,f)=>Array.from({length:n},f);
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+const lcm=(a,b)=>a/gcd(a,b)*b;
+const op=(texto,ops,sol,extra={})=>({tipo:"op",texto,ops,ok:0,sol,...extra}); // la primera opción es la correcta
+const num=(texto,resp,sol)=>({tipo:"num",texto,resp,sol});
+const prob=(texto,resp,sol)=>({tipo:"num",largo:true,texto,resp,sol,nota:"Escribe solo el número."});
+// Fracción escrita en vertical
+const fr=(n,d)=>`<span class="fr"><b>${n}</b><i>${d}</i></span>`;
+const frH=(n,d)=>`<span class="fr"><b>${n}</b><i>?</i></span>`.replace("?",d);
+const mixto=(e,n,d)=>`<span class="mx">${e}</span>${fr(n,d)}`;
+const grande=html=>`<span class="grande">${html}</span>`;
+const HUECO=`<span class="hueco">?</span>`;
+const distintas=(lista,clave=x=>x)=>{const vistos=new Set();return lista.filter(x=>{const k=clave(x);if(vistos.has(k))return false;vistos.add(k);return true})};
+// Opciones de fracciones [n,d]: la primera es la correcta; se quitan repetidas y las que valen lo mismo que la correcta
+function opsFr(ok,malas){
+  const eq=(a,b)=>a[0]*b[1]===a[1]*b[0];
+  // Si quedan pocas opciones, se completan con fracciones cercanas a la correcta
+  const reserva=[[ok[0]+1,ok[1]],[ok[0],ok[1]+1],[ok[0]+2,ok[1]+1]];
+  const m=distintas([...malas,...reserva].filter(x=>x[1]>0&&x[0]>=0&&!eq(x,ok)),x=>x[0]+"/"+x[1]).slice(0,3);
+  return [fr(...ok),...m.map(x=>fr(...x))];
+}
+
+/* =====================================================================
+   Leer y representar
+   ===================================================================== */
+const NOMBRE_D={2:["medio","medios"],3:["tercio","tercios"],4:["cuarto","cuartos"],5:["quinto","quintos"],6:["sexto","sextos"],7:["séptimo","séptimos"],
+  8:["octavo","octavos"],9:["noveno","novenos"],10:["décimo","décimos"],11:["onceavo","onceavos"],12:["doceavo","doceavos"]};
+const NUM=["cero","un","dos","tres","cuatro","cinco","seis","siete","ocho","nueve","diez","once","doce"];
+const leer=(n,d)=>`${NUM[n]} ${n===1?NOMBRE_D[d][0]:NOMBRE_D[d][1]}`;
+// Dibujo: tarta (círculo en sectores) o barra, con n partes coloreadas de d
+function dibujo(n,d,tipo){
+  const C="var(--river)",V="var(--panel)",S="var(--ink)";
+  if(tipo==="barra"){
+    const w=240/d;
+    return `<svg class="dib" viewBox="-2 -2 244 64" width="244" height="64">${Array.from({length:d},(_,i)=>`<rect x="${i*w}" y="0" width="${w}" height="60" fill="${i<n?C:V}" stroke="${S}" stroke-width="2"/>`).join("")}</svg>`;
+  }
+  const r=56,cx=60,cy=60;
+  const pts=Array.from({length:d},(_,i)=>{const a=-Math.PI/2+2*Math.PI*i/d;return[cx+r*Math.cos(a),cy+r*Math.sin(a)]});
+  return `<svg class="dib" viewBox="0 0 120 120" width="130" height="130">${pts.map((p,i)=>{const q=pts[(i+1)%d];
+    return `<path d="M${cx},${cy} L${p[0].toFixed(1)},${p[1].toFixed(1)} A${r},${r} 0 0 1 ${q[0].toFixed(1)},${q[1].toFixed(1)} Z" fill="${i<n?C:V}" stroke="${S}" stroke-width="2"/>`}).join("")}</svg>`;
+}
+function qDibujo(){
+  const d=rnd(3,10),n=rnd(1,d-1);
+  return op(`¿Qué fracción está coloreada?<span class="grande">${dibujo(n,d,Math.random()<.5?"tarta":"barra")}</span>`,opsFr([n,d],[[d-n,d],[d,n],[n,d+1],[n+1,d],[n,d-1]]),
+    `Hay <b>${d}</b> partes iguales (denominador) y <b>${n}</b> coloreadas (numerador): ${fr(n,d)}, «${leer(n,d)}».`);
+}
+function qLectura(){
+  const d=rnd(2,12),n=rnd(1,Math.min(12,d+3));
+  const malas=distintas([leer(n,d===2?3:d-1),leer(Math.max(1,(n%12)+1),d),`${NUM[d]} ${n===1?NOMBRE_D[Math.min(12,Math.max(2,n+1))][0]:NOMBRE_D[Math.min(12,Math.max(2,n))][1]}`,`${NUM[n]} entre ${NUM[d]==="un"?"uno":NUM[d]}`]).filter(x=>x!==leer(n,d));
+  return op(`¿Cómo se lee ${fr(n,d)}?`,[leer(n,d),...malas.slice(0,3)],`Se lee <b>${leer(n,d)}</b>: primero el numerador y luego el denominador (${d} → ${NOMBRE_D[d][1]}).`);
+}
+function qEscribe(){
+  const d=rnd(2,12),n=rnd(1,Math.min(12,d+2));
+  return op(`¿Cómo se escribe «${leer(n,d)}»?`,opsFr([n,d],[[d,n],[n,d+1],[n+1,d],[n,d-1]]),`«${leer(n,d)}» = ${fr(n,d)}.`);
+}
+const TERMINOS=[
+  ()=>op(`En ${fr(3,8)}, ¿qué indica el <b>denominador</b>?`,["En cuántas partes iguales se divide la unidad","Cuántas partes se toman","El resultado de la división","Cuántas unidades hay"],"El <b>denominador</b> (abajo) indica en cuántas partes iguales se divide la unidad.",{one:true}),
+  ()=>op(`En ${fr(3,8)}, ¿qué indica el <b>numerador</b>?`,["Cuántas partes se toman","En cuántas partes se divide la unidad","El número de unidades","Nada"],"El <b>numerador</b> (arriba) indica cuántas partes se toman.",{one:true}),
+];
+function qUnidad(){
+  const d=rnd(2,9),tipo=pick(["menor","igual","mayor"]),n=tipo==="menor"?rnd(1,d-1):tipo==="igual"?d:rnd(d+1,2*d);
+  const ops=["Menor que la unidad","Igual a la unidad","Mayor que la unidad"];
+  return op(`La fracción ${fr(n,d)} es…`,[ops[["menor","igual","mayor"].indexOf(tipo)],...ops.filter(x=>x!==ops[["menor","igual","mayor"].indexOf(tipo)])],
+    tipo==="menor"?"Numerador <b>menor</b> que el denominador: es menor que la unidad (fracción propia).":tipo==="igual"?"Numerador <b>igual</b> al denominador: vale 1.":"Numerador <b>mayor</b> que el denominador: es mayor que la unidad (fracción impropia).",{fijo:true,orden:ops});
+}
+const genLeer=()=>mezcla(veces(4,qDibujo),veces(2,qLectura),veces(2,qEscribe),[pick(TERMINOS)(),qUnidad()]);
+
+/* =====================================================================
+   Comparar fracciones
+   ===================================================================== */
+const SIGNOS=["&gt;","&lt;","="];
+const signo=(a,b,c,d)=>a*d>c*b?"&gt;":a*d<c*b?"&lt;":"=";
+function qCompara(){
+  const tipo=pick(["den","den","num","num","dist","dist","eq"]);let a,b,c,d;
+  if(tipo==="den"){b=d=rnd(3,12);a=rnd(1,b+2);do{c=rnd(1,b+2)}while(c===a)}
+  else if(tipo==="num"){a=c=rnd(1,6);b=rnd(2,12);do{d=rnd(2,12)}while(d===b)}
+  else if(tipo==="eq"){a=rnd(1,4);b=rnd(a+1,6);const k=rnd(2,4);c=a*k;d=b*k;if(Math.random()<.5)[a,b,c,d]=[c,d,a,b]}
+  else{do{a=rnd(1,6);b=rnd(2,9);c=rnd(1,6);d=rnd(2,9)}while(b===d||a*d===c*b)}
+  const s=signo(a,b,c,d),sol=tipo==="den"?"Con el <b>mismo denominador</b>, es mayor la que tiene mayor numerador."
+    :tipo==="num"?"Con el <b>mismo numerador</b>, es mayor la que tiene <b>menor</b> denominador (las partes son más grandes)."
+    :`Multiplicamos en cruz: ${a} × ${d} = ${a*d} y ${c} × ${b} = ${c*b}. ${a*d===c*b?"Son iguales: son <b>equivalentes</b>.":a*d>c*b?"La primera es mayor.":"La segunda es mayor."}`;
+  return op(`¿Qué signo va en el hueco?${grande(`${fr(a,b)} ${HUECO} ${fr(c,d)}`)}`,[s,...SIGNOS.filter(x=>x!==s)],`${fr(a,b)} <b>${s}</b> ${fr(c,d)}. ${sol}`,{fijo:true,orden:SIGNOS});
+}
+function qMayor(){
+  const d=rnd(4,12),ns=sample(Array.from({length:d+2},(_,i)=>i+1),3),m=Math.max(...ns);
+  return op("¿Cuál es la fracción mayor?",[fr(m,d),...ns.filter(x=>x!==m).map(x=>fr(x,d))],`Con el mismo denominador, la mayor es la de mayor numerador: ${fr(m,d)}.`);
+}
+const genComparar=()=>mezcla(veces(8,qCompara),veces(2,qMayor));
+
+/* =====================================================================
+   Fracciones equivalentes
+   ===================================================================== */
+function qSonEquiv(){
+  const a=rnd(1,5),b=rnd(a+1,8),k=rnd(2,4),si=Math.random()<.5,c=a*k,d=si?b*k:b*k+pick([-1,1]);
+  return op(`¿Son equivalentes ${fr(a,b)} y ${fr(c,d)}?`,si?["Sí","No"]:["No","Sí"],`Multiplicamos en cruz: ${a} × ${d} = ${a*d} y ${b} × ${c} = ${b*c}. ${si?"Son iguales: <b>sí</b> son equivalentes.":"No son iguales: <b>no</b> son equivalentes."}`,{fijo:true,orden:["Sí","No"]});
+}
+function qFalta(){
+  const a=rnd(1,5),b=rnd(a+1,9),k=rnd(2,6),arriba=Math.random()<.5;
+  return arriba?num(`¿Qué número falta?${grande(`${fr(a,b)} = ${fr(HUECO,b*k)}`)}`,a*k,`El denominador se ha multiplicado por ${k} (${b} × ${k} = ${b*k}); el numerador también: ${a} × ${k} = <b>${a*k}</b>.`)
+    :num(`¿Qué número falta?${grande(`${fr(a,b)} = ${fr(a*k,HUECO)}`)}`,b*k,`El numerador se ha multiplicado por ${k} (${a} × ${k} = ${a*k}); el denominador también: ${b} × ${k} = <b>${b*k}</b>.`);
+}
+function qIrreducible(){
+  const a=rnd(1,5),b=rnd(a+1,9);if(gcd(a,b)!==1)return qIrreducible();
+  const k=rnd(2,5),n=a*k,d=b*k;
+  return op(`Simplifica ${fr(n,d)} hasta la fracción irreducible`,opsFr([a,b],[[n/ (k>2?2:1),d/(k>2?2:1)].map(Math.round),[a+1,b],[b,a],[a,b+1],[n-1,d-1]]),`Dividimos numerador y denominador entre su m.c.d., ${k}: ${n} : ${k} = ${a} y ${d} : ${k} = ${b}. Queda ${fr(a,b)}.`);
+}
+function qCualEquiv(){
+  const a=rnd(1,4),b=rnd(a+1,8),k=rnd(2,5);
+  return op(`¿Qué fracción es equivalente a ${fr(a,b)}?`,opsFr([a*k,b*k],[[a+k,b+k],[a*k,b+k],[a+k,b*k],[b*k,a*k]]),`Multiplicando numerador y denominador por ${k}: ${fr(a*k,b*k)}.`);
+}
+const DEF_EQ=[
+  ()=>op("¿Cómo se obtiene una fracción equivalente?",["Multiplicando o dividiendo el numerador y el denominador por el mismo número","Sumando el mismo número arriba y abajo","Multiplicando solo el numerador","Cambiando el numerador por el denominador"],"Se <b>multiplican</b> (amplificar) o se <b>dividen</b> (simplificar) los dos términos por el mismo número.",{one:true}),
+  ()=>op("¿Cómo se comprueba si dos fracciones son equivalentes?",["Multiplicando en cruz: los productos deben ser iguales","Sumando los numeradores","Comparando solo los denominadores","Viendo si tienen el mismo numerador"],"Dos fracciones son equivalentes si sus <b>productos cruzados</b> son iguales.",{one:true}),
+];
+const genEquivalentes=()=>mezcla(veces(2,qSonEquiv),veces(3,qFalta),veces(2,qIrreducible),veces(2,qCualEquiv),[pick(DEF_EQ)()]);
+
+/* =====================================================================
+   Números mixtos
+   ===================================================================== */
+function qMixtoAFr(){
+  const e=rnd(1,5),d=rnd(2,9),n=rnd(1,d-1);
+  return num(`Pasa a fracción:${grande(`${mixto(e,n,d)} = ${fr(HUECO,d)}`)}`,e*d+n,`Multiplicamos el entero por el denominador y sumamos el numerador: ${e} × ${d} + ${n} = <b>${e*d+n}</b>. Queda ${fr(e*d+n,d)}.`);
+}
+function qFrAMixto(){
+  const e=rnd(1,5),d=rnd(2,9),n=rnd(1,d-1),N=e*d+n;
+  const ops=distintas([[e,n,d],[e+1,n,d],[n,e,d],[e,d-n,d],[e-1>0?e-1:e+2,n,d]],x=>x.join()).slice(0,4);
+  return op(`Pasa ${fr(N,d)} a número mixto`,ops.map(x=>mixto(...x)),`Dividimos ${N} : ${d} = <b>${e}</b> y sobran <b>${n}</b>: el cociente es el entero, el resto es el numerador. Queda ${mixto(e,n,d)}.`);
+}
+function qEnteros(){
+  const e=rnd(1,6),d=rnd(2,8),n=rnd(1,d-1),N=e*d+n;
+  return num(`¿Cuántas unidades enteras caben en ${fr(N,d)}?`,e,`${N} : ${d} = <b>${e}</b> y sobran ${n}. Hay ${e} enteros y ${fr(n,d)}.`);
+}
+const DEF_MX=[
+  ()=>op("¿Qué es un número mixto?",["Un número formado por un entero y una fracción","Una fracción con numerador cero","Una suma de dos fracciones iguales","Un número decimal"],"Un <b>número mixto</b> tiene una parte entera y una fracción: 2 y 3 cuartos.",{one:true}),
+  ()=>op("¿Qué fracciones se pueden escribir como número mixto?",["Las mayores que la unidad","Las menores que la unidad","Las que tienen denominador 10","Ninguna"],"Solo las <b>mayores que la unidad</b> (numerador mayor que el denominador).",{one:true}),
+];
+const genMixtos=()=>mezcla(veces(4,qMixtoAFr),veces(3,qFrAMixto),[qEnteros(),...DEF_MX.map(f=>f())]);
+
+/* =====================================================================
+   Fracción de una cantidad
+   ===================================================================== */
+function qDeCantidad(){
+  const d=rnd(2,10),n=rnd(1,d-1),k=rnd(2,12),c=d*k;
+  return num(`Calcula:${grande(`${fr(n,d)} de ${c} = ${HUECO}`)}`,n*k,`Dividimos entre el denominador y multiplicamos por el numerador: ${c} : ${d} = ${k}; ${k} × ${n} = <b>${n*k}</b>.`);
+}
+const CANT_PROB=[
+  ()=>{const d=pick([4,5,6,8]),n=rnd(1,d-1),k=rnd(3,6),t=d*k;return prob(`En una clase hay ${t} alumnos y ${fr(n,d)} llevan gafas. ¿Cuántos alumnos llevan gafas?`,n*k,`${t} : ${d} = ${k}; ${k} × ${n} = <b>${n*k}</b> alumnos.`)},
+  ()=>{const d=pick([3,4,5]),n=rnd(1,d-1),k=rnd(4,10),t=d*k;return prob(`Un depósito de ${t} litros está lleno hasta sus ${fr(n,d)}. ¿Cuántos litros tiene?`,n*k,`${t} : ${d} = ${k}; ${k} × ${n} = <b>${n*k}</b> litros.`)},
+  ()=>{const d=pick([5,6,10]),n=rnd(1,d-1),k=rnd(2,6)*5,t=d*k;return prob(`Lucía tiene ${t} cromos y regala ${fr(n,d)} a su hermano. ¿Cuántos cromos regala?`,n*k,`${t} : ${d} = ${k}; ${k} × ${n} = <b>${n*k}</b> cromos.`)},
+];
+const DEF_CANT=()=>op("¿Cómo se calcula la fracción de una cantidad?",["Se divide la cantidad entre el denominador y se multiplica por el numerador","Se suma el numerador a la cantidad","Se multiplica la cantidad por el denominador","Se divide entre el numerador"],"Para calcular ${fr(3,4)} de 20: 20 : 4 = 5 y 5 × 3 = 15.".replace("${fr(3,4)}",fr(3,4)),{one:true});
+const genCantidad=()=>mezcla(veces(6,qDeCantidad),sample(CANT_PROB,3).map(f=>f()),[DEF_CANT()]);
+
+/* =====================================================================
+   Sumar y restar con el mismo denominador
+   ===================================================================== */
+function qSumaIgual(){
+  const d=rnd(3,12),resta=Math.random()<.45;let a=rnd(1,d),b=rnd(1,d);if(resta&&b>a)[a,b]=[b,a];if(resta&&a===b)a++;
+  const r=resta?a-b:a+b;
+  return num(`Calcula:${grande(`${fr(a,d)} ${resta?"−":"+"} ${fr(b,d)} = ${fr(HUECO,d)}`)}`,r,`Con el mismo denominador, se ${resta?"restan":"suman"} los numeradores y se deja el denominador: ${a} ${resta?"−":"+"} ${b} = <b>${r}</b> → ${fr(r,d)}.`);
+}
+function qSumaIgualOps(){
+  const d=rnd(3,9),a=rnd(1,d),b=rnd(1,d);
+  return op(`¿Cuánto es ${fr(a,d)} + ${fr(b,d)}?`,opsFr([a+b,d],[[a+b,2*d],[a*b,d],[a+b,d*d]]),`Se suman los numeradores y se deja el denominador: ${fr(a+b,d)}. ¡No se suman los denominadores!`);
+}
+const DEF_SI=()=>op("Para sumar fracciones con el mismo denominador…",["se suman los numeradores y se deja el mismo denominador","se suman numeradores y denominadores","se multiplican en cruz","se suman solo los denominadores"],"Se suman los <b>numeradores</b> y el denominador <b>se queda igual</b>.",{one:true});
+const genSumasIgual=()=>mezcla(veces(7,qSumaIgual),veces(2,qSumaIgualOps),[DEF_SI()]);
+
+/* =====================================================================
+   Sumar y restar con distinto denominador (reduciendo a común denominador con el m.c.m.)
+   ===================================================================== */
+function datosDistinto(){
+  for(;;){
+    const b=rnd(2,8),d=rnd(2,8);if(b===d)continue;
+    const a=rnd(1,b+1),c=rnd(1,d+1),m=lcm(b,d);if(m>40)continue;
+    const A=a*m/b,C=c*m/d,resta=Math.random()<.45;
+    if(resta&&A<=C)continue;
+    return {a,b,c,d,m,A,C,resta,r:resta?A-C:A+C};
+  }
+}
+const pasos=({a,b,c,d,m,A,C,resta,r})=>`m.c.m.(${b}, ${d}) = <b>${m}</b>. ${fr(a,b)} = ${fr(A,m)} y ${fr(c,d)} = ${fr(C,m)}. Ahora tienen el mismo denominador: ${A} ${resta?"−":"+"} ${C} = ${r} → ${fr(r,m)}.`;
+function qDistintoNum(){const x=datosDistinto();
+  return num(`Calcula (el denominador común es ${x.m}):${grande(`${fr(x.a,x.b)} ${x.resta?"−":"+"} ${fr(x.c,x.d)} = ${fr(HUECO,x.m)}`)}`,x.r,pasos(x))}
+function qDistintoOps(){const x=datosDistinto(),s=x.resta?-1:1;
+  return op(`¿Cuánto es ${fr(x.a,x.b)} ${x.resta?"−":"+"} ${fr(x.c,x.d)}?`,opsFr([x.r,x.m],[[Math.abs(x.a+s*x.c),x.b+x.d],[Math.abs(x.a+s*x.c),x.m],[x.A+s*x.c,x.m],[x.r,x.b*x.d+1]]),pasos(x))}
+function qMcmDen(){const x=datosDistinto();
+  return num(`Para calcular ${fr(x.a,x.b)} ${x.resta?"−":"+"} ${fr(x.c,x.d)}, ¿cuál es el denominador común más pequeño?`,x.m,`Es el m.c.m. de los denominadores: m.c.m.(${x.b}, ${x.d}) = <b>${x.m}</b>.`)}
+const DEF_SD=()=>op("Para sumar fracciones con distinto denominador, primero…",["se buscan fracciones equivalentes con el mismo denominador (con el m.c.m.)","se suman numeradores y denominadores","se multiplican los numeradores","se restan los denominadores"],"Primero se reducen a <b>común denominador</b> (el m.c.m. de los denominadores) y luego se suman los numeradores.",{one:true});
+const genSumasDistinto=()=>mezcla(veces(4,qDistintoNum),veces(3,qDistintoOps),veces(2,qMcmDen),[DEF_SD()]);
+
+/* =====================================================================
+   Multiplicar y dividir
+   ===================================================================== */
+function qMult(){const a=rnd(1,7),b=rnd(2,9),c=rnd(1,7),d=rnd(2,9);
+  return op(`¿Cuánto es ${fr(a,b)} × ${fr(c,d)}?`,opsFr([a*c,b*d],[[a*d,b*c],[a+c,b+d],[a*c,b+d],[b*c,a*d]]),`Se multiplican los numeradores entre sí y los denominadores entre sí: ${a} × ${c} = ${a*c}; ${b} × ${d} = ${b*d} → ${fr(a*c,b*d)}.`)}
+function qDiv(){const a=rnd(1,7),b=rnd(2,9),c=rnd(1,7),d=rnd(2,9);if(a*d===b*c)return qDiv();
+  return op(`¿Cuánto es ${fr(a,b)} : ${fr(c,d)}?`,opsFr([a*d,b*c],[[a*c,b*d],[b*c,a*d],[a+d,b+c],[a*d,b+c]]),`Se multiplica <b>en cruz</b>: ${a} × ${d} = ${a*d} (numerador) y ${b} × ${c} = ${b*c} (denominador) → ${fr(a*d,b*c)}.`)}
+function qMultNum(){const a=rnd(1,6),b=rnd(2,8),c=rnd(1,6),d=rnd(2,8),div=Math.random()<.5;
+  return div?num(`Calcula:${grande(`${fr(a,b)} : ${fr(c,d)} = ${fr(HUECO,b*c)}`)}`,a*d,`En cruz: ${a} × ${d} = <b>${a*d}</b> y ${b} × ${c} = ${b*c}.`)
+    :num(`Calcula:${grande(`${fr(a,b)} × ${fr(c,d)} = ${fr(HUECO,b*d)}`)}`,a*c,`${a} × ${c} = <b>${a*c}</b> y ${b} × ${d} = ${b*d}.`)}
+function qPorEntero(){const n=rnd(1,5),d=rnd(2,9),k=rnd(2,6);
+  return num(`Calcula:${grande(`${k} × ${fr(n,d)} = ${fr(HUECO,d)}`)}`,k*n,`Se multiplica el número por el numerador: ${k} × ${n} = <b>${k*n}</b>; el denominador se queda igual.`)}
+const DEF_MD=[
+  ()=>op("¿Cómo se multiplican dos fracciones?",["Numerador por numerador y denominador por denominador","En cruz","Se suman los numeradores","Se dejan los denominadores igual"],"Se multiplican <b>en línea</b>: numeradores entre sí y denominadores entre sí.",{one:true}),
+  ()=>op("¿Cómo se dividen dos fracciones?",["Multiplicando en cruz","Dividiendo numerador entre numerador","Sumando en cruz","Restando los denominadores"],"Se multiplica <b>en cruz</b>: numerador de la 1.ª por denominador de la 2.ª (arriba) y denominador de la 1.ª por numerador de la 2.ª (abajo).",{one:true}),
+];
+const genMultDiv=()=>mezcla(veces(3,qMult),veces(3,qDiv),veces(2,qMultNum),[qPorEntero(),pick(DEF_MD)()]);
+
+/* =====================================================================
+   Problemas (en el examen salen 2; cada uno resuelto a la primera suma en su ranking)
+   ===================================================================== */
+const NOMBRES=["Ana","Luis","Marta","Pablo","Lucía","Hugo","Sara","Mario","Carla","Leo"];
+const PROBLEMAS=[
+  ()=>{const d=pick([6,8,10,12]),a=rnd(1,Math.floor(d/2)-1),b=rnd(1,Math.floor(d/2)-1),[x,y]=sample(NOMBRES,2);
+    return prob(`Una pizza se corta en ${d} trozos iguales. ${x} come ${fr(a,d)} y ${y} ${fr(b,d)}. ¿Qué fracción se han comido entre los dos? Escribe el numerador (el denominador es ${d}).`,a+b,`${fr(a,d)} + ${fr(b,d)} = ${fr(a+b,d)}: mismo denominador, se suman los numeradores.`)},
+  ()=>{const d=pick([4,5,8,10]),n=rnd(1,d-1),k=rnd(4,12),t=d*k;return prob(`En un autobús viajan ${t} personas y ${fr(n,d)} son niños. ¿Cuántos niños hay?`,n*k,`${fr(n,d)} de ${t}: ${t} : ${d} = ${k}; ${k} × ${n} = <b>${n*k}</b> niños.`)},
+  ()=>{const d=pick([5,6,7]),n=rnd(1,d-1),k=rnd(10,30),t=d*k,[x]=sample(NOMBRES,1);return prob(`${x} ha leído ${fr(n,d)} de un libro de ${t} páginas. ¿Cuántas páginas le quedan por leer?`,t-n*k,`Ha leído ${fr(n,d)} de ${t} = ${n*k} páginas. Le quedan ${t} − ${n*k} = <b>${t-n*k}</b>. (También: le quedan ${fr(d-n,d)} de ${t}.)`)},
+  ()=>{const [x]=sample(NOMBRES,1);return prob(`${x} gasta ${fr(1,3)} de su paga en cromos y ${fr(1,4)} en golosinas. ¿Qué fracción de la paga ha gastado? Escribe el numerador (el denominador común es 12).`,7,`m.c.m.(3, 4) = 12. ${fr(1,3)} = ${fr(4,12)} y ${fr(1,4)} = ${fr(3,12)}. ${fr(4,12)} + ${fr(3,12)} = ${fr(7,12)}.`)},
+  ()=>{const [x,y]=sample(NOMBRES,2);return prob(`De una tarta, ${x} come ${fr(1,2)} y ${y} ${fr(1,3)}. ¿Qué fracción de tarta queda? Escribe el numerador (el denominador es 6).`,1,`Comen ${fr(1,2)} + ${fr(1,3)} = ${fr(3,6)} + ${fr(2,6)} = ${fr(5,6)}. Queda ${fr(6,6)} − ${fr(5,6)} = ${fr(1,6)}.`)},
+  ()=>{const d=pick([3,4,5]),n=rnd(1,d-1),k=rnd(6,20),t=d*k;return prob(`Un depósito de ${t} litros está lleno en sus ${fr(n,d)}. ¿Cuántos litros faltan para llenarlo?`,t-n*k,`Tiene ${fr(n,d)} de ${t} = ${n*k} litros. Faltan ${t} − ${n*k} = <b>${t-n*k}</b> litros.`)},
+  ()=>{const k=rnd(2,5),d=pick([3,4,5,6]);return prob(`Cada día bebo ${fr(1,d)} de litro de zumo. ¿Cuántos ${NOMBRE_D[d][1]} de litro bebo en ${k*d} días? Escribe el numerador (el denominador es ${d}).`,k*d,`${k*d} × ${fr(1,d)} = ${fr(k*d,d)}, que son ${k} litros.`)},
+];
+const genProblemas=()=>sample(PROBLEMAS,5).map(f=>f());
+
+/* =====================================================================
+   Secciones
+   ===================================================================== */
+const SECS_FR={ // estrellas: no se usan (van por aciertos), pero el motor las necesita
+  leer:{nombre:"Leer y representar",estrellas:[60,100],gen:genLeer},
+  comparar:{nombre:"Comparar",estrellas:[60,100],gen:genComparar},
+  equivalentes:{nombre:"Equivalentes",estrellas:[60,100],gen:genEquivalentes},
+  mixtos:{nombre:"Números mixtos",estrellas:[60,100],gen:genMixtos},
+  cantidad:{nombre:"Fracción de una cantidad",estrellas:[60,100],gen:genCantidad},
+  sumas_igual:{nombre:"+ − mismo denominador",estrellas:[60,100],gen:genSumasIgual},
+  sumas_distinto:{nombre:"+ − distinto denominador",estrellas:[60,100],gen:genSumasDistinto},
+  multdiv:{nombre:"× y :",estrellas:[60,100],gen:genMultDiv},
+  problemas:{nombre:"🧩 Problemas",estrellas:[300,480],gen:genProblemas,enExamen:2,contador:true},
+};
+
+/* =====================================================================
+   Teoría
+   ===================================================================== */
+const TEORIA_FR={
+  leer:`<h3>Términos de una fracción</h3><p>${fr(3,5)} → <b>numerador</b> (3): partes que se toman. <b>Denominador</b> (5): partes iguales en que se divide la unidad.</p><p>Se lee el numerador y después el denominador: 2 → medios, 3 → tercios, 4 → cuartos, 5 → quintos… 10 → décimos; desde 11, «-avos» (onceavos, doceavos).</p><p>Numerador menor que el denominador: menor que 1. Igual: vale 1. Mayor: mayor que 1.</p>`,
+  comparar:`<h3>Comparar fracciones</h3><p><b>Mismo denominador:</b> mayor la de mayor numerador (${fr(5,8)} &gt; ${fr(3,8)}).<br><b>Mismo numerador:</b> mayor la de menor denominador (${fr(2,3)} &gt; ${fr(2,7)}).<br><b>Distintos:</b> multiplica en cruz o busca fracciones equivalentes con el mismo denominador.</p>`,
+  equivalentes:`<h3>Fracciones equivalentes</h3><p>Representan la misma cantidad: ${fr(1,2)} = ${fr(2,4)} = ${fr(4,8)}.</p><p><b>Amplificar:</b> multiplicar los dos términos por el mismo número. <b>Simplificar:</b> dividirlos entre el mismo número. La <b>irreducible</b> ya no se puede simplificar.</p><p>Comprobar: los productos en cruz son iguales (1 × 4 = 2 × 2).</p>`,
+  mixtos:`<h3>Números mixtos</h3><p>Un entero y una fracción: ${mixto(2,3,4)}.</p><p><b>Mixto → fracción:</b> entero × denominador + numerador: 2 × 4 + 3 = 11 → ${fr(11,4)}.<br><b>Fracción → mixto:</b> divide ${fr(11,4)}: 11 : 4 = 2 y sobran 3 → ${mixto(2,3,4)}.</p>`,
+  cantidad:`<h3>Fracción de una cantidad</h3><p>Divide la cantidad entre el denominador y multiplica por el numerador.</p><p>${fr(3,4)} de 20: 20 : 4 = 5; 5 × 3 = <b>15</b>.</p>`,
+  sumas_igual:`<h3>Mismo denominador</h3><p>Se suman (o restan) los numeradores y el denominador se queda igual: ${fr(2,7)} + ${fr(3,7)} = ${fr(5,7)}.</p><p>¡Nunca se suman los denominadores!</p>`,
+  sumas_distinto:`<h3>Distinto denominador</h3><p>1. Calcula el m.c.m. de los denominadores.<br>2. Busca fracciones equivalentes con ese denominador.<br>3. Suma o resta los numeradores.</p><p>${fr(1,2)} + ${fr(1,3)}: m.c.m. = 6 → ${fr(3,6)} + ${fr(2,6)} = ${fr(5,6)}.</p>`,
+  multdiv:`<h3>Multiplicar</h3><p>En línea: ${fr(2,3)} × ${fr(4,5)} = ${fr(8,15)}.</p><h3>Dividir</h3><p>En cruz: ${fr(2,3)} : ${fr(4,5)} = ${fr("2 × 5","3 × 4")} = ${fr(10,12)}.</p><p>Un número por una fracción: se multiplica por el numerador (3 × ${fr(2,7)} = ${fr(6,7)}).</p>`,
+  problemas:`<h3>Problemas con fracciones</h3><p>«${fr(3,5)} de 40» → fracción de una cantidad (40 : 5 × 3).<br>«¿Qué fracción se han comido entre los dos?» → suma de fracciones.<br>«¿Cuánto queda?» → resta: el total es ${fr(1,1)} (por ejemplo ${fr(6,6)}).</p>`,
+};
+
+/* =====================================================================
+   Arranque
+   ===================================================================== */
+Quiz.init({secs:SECS_FR,teoria:TEORIA_FR,plan:{
+  juego:"fracciones",
+  ach:LOGROS.fracciones,
+  onFinish:(r)=>{
+    if(r.sec==="leer"&&!r.fallos)unlock("pizzero");
+    if(r.sec==="equivalentes"&&!r.fallos)unlock("equivalente");
+    if(["sumas_igual","sumas_distinto","multdiv"].every(s=>progress.best[s]&&progress.best[s].stars===3))unlock("operador");
+  },
+}});
+</script>
+</body>
+</html>

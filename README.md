@@ -10,6 +10,8 @@ que se puede cambiar; al cambiarlo se actualiza en todos los rankings.
 - `public/mates/index.html` — Matemáticas: múltiplos, divisores y poliedros.
 - `public/lengua/index.html` — Lengua: determinantes, diptongos, la v, polisémicas y homófonas.
 - `public/tablas/index.html` — Repaso de las tablas de multiplicar.
+- `public/fracciones/index.html` — Matemáticas: fracciones.
+- `public/lengua2/index.html` — Lengua, plan 2: el adjetivo, tildes de diptongos e hiatos, la h, prefijos y sufijos.
 - `public/naturales/index.html` — Ciencias Naturales: la nutrición.
 - `public/ingles/index.html` — Inglés, Unit 2 At the dig (con los vídeos y juegos de la profesora en cada sección).
 - `public/comun/quiz.js`, `quiz.css` — motor de preguntas que usan mates y lengua.
@@ -47,6 +49,8 @@ Planes y secciones:
 - lengua: det_encontrar, det_clasificar, vocales, diptongo, letra_v, polisemicas, homofonas
 - tablas: t2 … t10, mezcla
 - ingles: vocab, spelling, tobe, regulares, irregulares, frases, ordenador, repaso1
+- fracciones: leer, comparar, equivalentes, mixtos, cantidad, sumas_igual, sumas_distinto, multdiv, problemas
+- lengua2: adjetivos, grados, acentuacion, letra_h, derivadas, prefijos, sufijos
 - naturales: digestivo, digestion, circulatorio, circulacion, respiratorio, gases, excrecion, salud
 
 ## Últimos logros
@@ -66,3 +70,9 @@ también en el servidor, en `p/<plan>/<id>`).
 2. Añade el plan y sus secciones (con el tiempo mínimo creíble) en `JUEGOS`,
    al principio de `netlify/functions/ranking.mjs`.
 3. Añade su tarjeta en `public/index.html`.
+
+## Portada: planes actuales y pasados
+
+En `public/index.html`, las tarjetas de `#actuales` pueden llevar `<p class="entrega" data-entrega="AAAA-MM-DD">`:
+se muestra la fecha y los días que faltan, se ordenan por fecha y, al día siguiente de la entrega,
+la tarjeta pasa sola a "Planes pasados" (`#pasados`).

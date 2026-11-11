@@ -37,4 +37,16 @@ LOGROS.naturales = [...logrosBase({ pistas: false, tiempo: false, primero: "Prim
   { id: "pulmones", icon: "🫁", name: "Pulmones de atleta", desc: "Termina Aparato respiratorio sin ningún fallo." },
   { id: "vidasana", icon: "🥗", name: "Vida sana", desc: "Termina Salud, dieta y ejercicio sin ningún fallo." },
   ...LOGROS_EXAMEN];
-const PLAN_NOMBRE = { europa: "Europa", mates: "Matemáticas", lengua: "Lengua", tablas: "Tablas", ingles: "Inglés", naturales: "Naturales" };
+LOGROS.lengua2 = [...logrosBase({ pistas: false, tiempo: false, primero: "Primer adjetivo", pleno: "Maestro de la lengua" }),
+  { id: "adjetivos", icon: "🎨", name: "Cazador de adjetivos", desc: "Termina Encontrar adjetivos sin ningún fallo." },
+  { id: "tildes", icon: "✍️", name: "Tilde perfecta", desc: "Termina Tildes: diptongos e hiatos sin ningún fallo." },
+  { id: "hache", icon: "🤫", name: "La hache muda", desc: "Termina La letra h sin ningún fallo." },
+  ...LOGROS_EXAMEN];
+LOGROS.fracciones = [...logrosBase({ pistas: false, tiempo: false, primero: "Primera fracción", pleno: "Maestro de las fracciones" }),
+  { id: "pizzero", icon: "🍕", name: "Pizzero", desc: "Termina Leer y representar sin ningún fallo." },
+  { id: "equivalente", icon: "⚖️", name: "Equilibrista", desc: "Termina Equivalentes sin ningún fallo." },
+  { id: "operador", icon: "➗", name: "Calculadora de fracciones", desc: "Consigue 3 estrellas en las tres secciones de operaciones." },
+  { id: "resolutor", icon: "🧩", name: "Resolutor", desc: "Resuelve 10 problemas a la primera." },
+  { id: "genio", icon: "🦉", name: "Genio de los problemas", desc: "Resuelve 50 problemas a la primera." },
+  ...LOGROS_EXAMEN];
+const PLAN_NOMBRE = { europa: "Europa", mates: "Matemáticas", lengua: "Lengua", lengua2: "Lengua 2", tablas: "Tablas", ingles: "Inglés", naturales: "Naturales", fracciones: "Fracciones" };
